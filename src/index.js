@@ -79,6 +79,30 @@ app.get('/api/jobs/:id/logs', (req, res) => {
   res.json(logs);
 });
 
+// Get active mechanics
+app.get('/api/mechanics', (req, res) => {
+  const mechanics = db.prepare(`SELECT * FROM mechanics WHERE active = 1 ORDER BY name ASC`).all();
+  res.json(mechanics);
+});
+
+// Add a mechanic
+app.post('/api/mechanics', (req, res) => {
+  const { name, speciality } = req.body;
+  if (!name?.trim()) return res.status(400).json({ error: 'Name is required' });
+  try {
+    const result = db.prepare(`INSERT INTO mechanics (name, speciality) VALUES (?, ?)`).run(name.trim(), speciality?.trim() || '');
+    res.json({ success: true, id: result.lastInsertRowid });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Remove a mechanic (soft delete)
+app.delete('/api/mechanics/:id', (req, res) => {
+  db.prepare(`UPDATE mechanics SET active = 0 WHERE id = ?`).run(req.params.id);
+  res.json({ success: true });
+});
+
 app.listen(PORT, () => {
   console.log(`Pagariya Workshop server running on http://localhost:${PORT}`);
 });

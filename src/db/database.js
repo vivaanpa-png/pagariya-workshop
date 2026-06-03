@@ -28,6 +28,17 @@ db.exec(`
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(job_id) REFERENCES jobs(id)
   );
+
+  CREATE TABLE IF NOT EXISTS mechanics (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE NOT NULL,
+    speciality TEXT DEFAULT '',
+    active INTEGER DEFAULT 1
+  );
 `);
+
+const seedMechanics = ['Raju', 'Suresh', 'Ramesh', 'Vijay', 'Manoj', 'Deepak'];
+const insertMechanic = db.prepare(`INSERT OR IGNORE INTO mechanics (name) VALUES (?)`);
+for (const name of seedMechanics) insertMechanic.run(name);
 
 module.exports = db;

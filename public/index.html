@@ -294,6 +294,61 @@
   .log-stage { font-size: 13px; font-weight: 600; color: var(--text); }
   .log-person { font-size: 12px; color: var(--text2); }
   .log-time { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; margin-top: 2px; }
+
+  /* ── SETTINGS PANEL ── */
+  .gear-btn {
+    width: 32px; height: 32px; border-radius: 9px;
+    background: var(--bg3); border: 1px solid var(--border);
+    color: var(--text2); font-size: 15px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .15s; flex-shrink: 0;
+  }
+  .gear-btn:hover { background: var(--bg4); color: var(--text); }
+
+  .settings-overlay {
+    position: fixed; inset: 0; z-index: 300;
+    background: rgba(0,0,0,.55); backdrop-filter: blur(8px);
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  .settings-overlay.open { opacity: 1; pointer-events: all; }
+  .settings-panel {
+    position: absolute; top: 0; right: 0; bottom: 0;
+    width: 380px; max-width: 100vw;
+    background: var(--bg2); border-left: 1px solid var(--border2);
+    transform: translateX(100%);
+    transition: transform .25s cubic-bezier(.4,0,.2,1);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .settings-overlay.open .settings-panel { transform: translateX(0); }
+  .settings-hdr {
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .settings-title { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
+  .settings-body { flex: 1; overflow-y: auto; padding: 20px; }
+  .settings-sec { margin-bottom: 28px; }
+  .settings-sec-hdr {
+    font-size: 11px; font-weight: 600; color: var(--text2);
+    text-transform: uppercase; letter-spacing: .08em; margin-bottom: 12px;
+  }
+  .mechanic-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 12px;
+    background: var(--bg3); border: 1px solid var(--border); margin-bottom: 6px;
+  }
+  .mechanic-row-info { flex: 1; min-width: 0; }
+  .mechanic-row-name { font-size: 14px; font-weight: 500; }
+  .mechanic-row-spec { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .mechanic-del-btn {
+    padding: 5px 10px; border-radius: 7px; flex-shrink: 0;
+    background: rgba(255,69,58,.1); border: 1px solid rgba(255,69,58,.25);
+    color: var(--red); font-size: 12px; cursor: pointer;
+    font-family: var(--sf); transition: all .15s;
+  }
+  .mechanic-del-btn:hover { background: rgba(255,69,58,.2); }
+  .settings-add-form { margin-top: 16px; }
 </style>
 </head>
 <body>
@@ -312,6 +367,7 @@
   <div class="topbar-right">
     <div class="live-dot"></div>
     <span class="live-label">Live</span>
+    <button class="gear-btn" onclick="openSettings()" title="Settings">⚙</button>
     <button class="add-btn" onclick="openAddModal()">
       <span>+</span> New Job
     </button>
@@ -412,14 +468,41 @@
   </div>
 </div>
 
+<!-- SETTINGS PANEL -->
+<div class="settings-overlay" id="settingsOverlay" onclick="closeSettingsOutside(event)">
+  <div class="settings-panel">
+    <div class="settings-hdr">
+      <span class="settings-title">Settings</span>
+      <button class="modal-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="settings-body">
+      <div class="settings-sec">
+        <div class="settings-sec-hdr">Mechanics</div>
+        <div id="mechanicsMgmtList"></div>
+        <div class="settings-add-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Name</label>
+              <input class="form-input" id="s-mechname" placeholder="Mechanic name">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Speciality</label>
+              <input class="form-input" id="s-mechspec" placeholder="e.g. Engine, Body">
+            </div>
+          </div>
+          <button class="form-submit" onclick="addMechanic()">Add Mechanic</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 const STAGES = ['created','assigned','inprogress','inspection','washing','done'];
 const STAGE_LABELS = {
   created: 'Created', assigned: 'Assigned', inprogress: 'In Progress',
   inspection: 'Inspection', washing: 'Washing', done: 'Done', delayed: 'Delayed'
 };
-const MECHANICS = ['Raju','Suresh','Ramesh','Vijay','Manoj','Deepak'];
-
 let currentTab = 'active';
 let assigningJobId = null;
 let jobs = [];
@@ -459,11 +542,14 @@ function stageIndex(stage) {
 }
 
 function buildStageTrack(stage) {
+  if (stage === 'delayed') {
+    return STAGES.map(() => `<div class="stage-seg delayed"></div>`).join('');
+  }
   const idx = stageIndex(stage);
   return STAGES.map((s, i) => {
     let cls = 'stage-seg';
     if (i < idx) cls += ' done';
-    else if (i === idx) cls += (stage === 'delayed' ? ' delayed' : ' active');
+    else if (i === idx) cls += stage === 'done' ? ' done' : ' active';
     return `<div class="${cls}"></div>`;
   }).join('');
 }
@@ -614,15 +700,28 @@ async function submitJob() {
 }
 
 // ── ASSIGN ─────────────────────────────────────
-function openAssign(jobId, carModel) {
+async function openAssign(jobId, carModel) {
   assigningJobId = jobId;
   document.getElementById('assignModalTitle').textContent = 'Assign — ' + carModel;
   const list = document.getElementById('mechanicList');
-  list.innerHTML = MECHANICS.map(m => `
-    <button class="mechanic-btn" onclick="assignMechanic('${m}')">
-      <div class="mechanic-av">🔧</div>${m}
-    </button>`).join('');
+  list.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0;">Loading…</div>';
   document.getElementById('assignModal').classList.add('open');
+  try {
+    const res = await fetch('/api/mechanics');
+    const mechanics = await res.json();
+    list.innerHTML = mechanics.length === 0
+      ? '<p style="color:var(--text3);font-size:13px;">No mechanics available. Add some in Settings.</p>'
+      : mechanics.map(m => `
+          <button class="mechanic-btn" onclick="assignMechanic(${JSON.stringify(m.name)})">
+            <div class="mechanic-av">🔧</div>
+            <div>
+              <div>${m.name}</div>
+              ${m.speciality ? `<div style="font-size:11px;color:var(--text2);margin-top:2px">${m.speciality}</div>` : ''}
+            </div>
+          </button>`).join('');
+  } catch {
+    list.innerHTML = '<p style="color:var(--text3);font-size:13px;">Could not load mechanics.</p>';
+  }
 }
 
 async function assignMechanic(name) {
@@ -679,6 +778,61 @@ async function viewLogs(jobId, title) {
 // ── MODAL UTILS ────────────────────────────────
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 function closeModalOutside(e, id) { if (e.target === document.getElementById(id)) closeModal(id); }
+
+// ── SETTINGS ───────────────────────────────────
+function openSettings() {
+  document.getElementById('settingsOverlay').classList.add('open');
+  loadMechanicsSettings();
+}
+
+function closeSettings() {
+  document.getElementById('settingsOverlay').classList.remove('open');
+}
+
+function closeSettingsOutside(e) {
+  if (e.target === document.getElementById('settingsOverlay')) closeSettings();
+}
+
+async function loadMechanicsSettings() {
+  const list = document.getElementById('mechanicsMgmtList');
+  try {
+    const res = await fetch('/api/mechanics');
+    const mechanics = await res.json();
+    list.innerHTML = mechanics.length === 0
+      ? '<p style="color:var(--text3);font-size:13px;padding:4px 0;">No mechanics yet.</p>'
+      : mechanics.map(m => `
+          <div class="mechanic-row">
+            <div class="mechanic-av">🔧</div>
+            <div class="mechanic-row-info">
+              <div class="mechanic-row-name">${m.name}</div>
+              ${m.speciality ? `<div class="mechanic-row-spec">${m.speciality}</div>` : ''}
+            </div>
+            <button class="mechanic-del-btn" onclick="removeMechanic(${m.id})">Remove</button>
+          </div>`).join('');
+  } catch {
+    list.innerHTML = '<p style="color:var(--text3);font-size:13px;">Could not load mechanics.</p>';
+  }
+}
+
+async function addMechanic() {
+  const name = document.getElementById('s-mechname').value.trim();
+  const speciality = document.getElementById('s-mechspec').value.trim();
+  if (!name) { alert('Mechanic name is required.'); return; }
+  const res = await fetch('/api/mechanics', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ name, speciality })
+  });
+  const data = await res.json();
+  if (data.error) { alert(data.error); return; }
+  document.getElementById('s-mechname').value = '';
+  document.getElementById('s-mechspec').value = '';
+  loadMechanicsSettings();
+}
+
+async function removeMechanic(id) {
+  await fetch(`/api/mechanics/${id}`, { method: 'DELETE' });
+  loadMechanicsSettings();
+}
 
 // ── AUTO REFRESH ───────────────────────────────
 loadJobs();
