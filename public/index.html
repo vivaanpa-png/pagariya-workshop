@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pagariya Workshop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --bg2: #141414;
+    --bg3: #1c1c1e;
+    --bg4: #2c2c2e;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #f2f2f7;
+    --text2: #8e8e93;
+    --text3: #48484a;
+    --red: #ff453a;
+    --green: #30d158;
+    --blue: #0a84ff;
+    --orange: #ff9f0a;
+    --yellow: #ffd60a;
+    --purple: #bf5af2;
+    --sf: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: var(--sf);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 2px; }
+
+  /* ── TOPBAR ── */
+  .topbar {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(10,10,10,0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    height: 56px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 16px; }
+  .topbar-logo { height: 28px; object-fit: contain; filter: brightness(0) invert(1); opacity: 0.9; }
+  .topbar-divider { width: 1px; height: 20px; background: var(--border2); }
+  .topbar-title { font-size: 14px; font-weight: 600; color: var(--text); letter-spacing: -0.01em; }
+
+  .topbar-center { display: flex; gap: 2px; background: var(--bg3); border-radius: 9px; padding: 3px; }
+  .tab-btn {
+    padding: 5px 16px; border-radius: 7px; font-size: 13px; font-weight: 500;
+    border: none; background: none; cursor: pointer; color: var(--text2);
+    font-family: var(--sf); transition: all .15s;
+  }
+  .tab-btn.active { background: var(--bg4); color: var(--text); }
+
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse-dot 2s infinite; }
+  @keyframes pulse-dot { 0%,100%{opacity:1;} 50%{opacity:.4;} }
+  .live-label { font-size: 12px; color: var(--text2); }
+  .add-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 14px; border-radius: 9px;
+    background: var(--blue); border: none; color: #fff;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    font-family: var(--sf); transition: opacity .15s;
+  }
+  .add-btn:hover { opacity: 0.85; }
+
+  /* ── STATS BAR ── */
+  .stats-bar {
+    display: flex; gap: 1px;
+    background: var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .stat-item {
+    flex: 1; padding: 14px 24px;
+    background: var(--bg);
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .stat-val { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+  .stat-label { font-size: 11px; color: var(--text2); font-weight: 400; text-transform: uppercase; letter-spacing: .06em; }
+  .stat-val.red { color: var(--red); }
+  .stat-val.green { color: var(--green); }
+  .stat-val.orange { color: var(--orange); }
+
+  /* ── MAIN ── */
+  .main { padding: 24px 32px; }
+
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 18px;
+  }
+  .section-title { font-size: 13px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .08em; }
+  .section-count { font-size: 12px; color: var(--text3); font-family: 'DM Mono', monospace; }
+
+  /* ── JOB GRID ── */
+  .job-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+
+  /* ── JOB CARD ── */
+  .job-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform .2s cubic-bezier(.4,0,.2,1), box-shadow .2s ease, border-color .2s;
+    animation: cardIn .4s ease forwards;
+    opacity: 0;
+  }
+  @keyframes cardIn { to { opacity: 1; transform: translateY(0); } }
+  .job-card { transform: translateY(12px); }
+  .job-card:hover { transform: translateY(-3px); box-shadow: 0 16px 48px rgba(0,0,0,0.4); border-color: var(--border2); }
+  .job-card.delayed { border-color: rgba(255,69,58,0.3); }
+  .job-card.done { opacity: 0.5; }
+
+  /* car image area */
+  .card-img {
+    width: 100%; height: 160px;
+    object-fit: cover;
+    display: block;
+    background: var(--bg3);
+    position: relative;
+  }
+  .card-img-wrap { position: relative; height: 160px; overflow: hidden; background: var(--bg3); }
+  .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .3s ease; }
+  .job-card:hover .card-img-wrap img { transform: scale(1.04); }
+  .card-img-placeholder {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 48px; color: var(--text3);
+  }
+  .card-img-gradient {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  }
+  .card-img-car-icon { font-size: 42px; opacity: 0.45; }
+  .card-img-car-name { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.35); letter-spacing: .06em; }
+  .card-img-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.7) 100%);
+  }
+  .card-stage-badge {
+    position: absolute; top: 12px; right: 12px;
+    padding: 4px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 600;
+    backdrop-filter: blur(8px);
+  }
+  .card-timer {
+    position: absolute; bottom: 10px; left: 12px;
+    font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500;
+    color: rgba(255,255,255,0.9);
+    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  }
+  .card-job-num {
+    position: absolute; bottom: 10px; right: 12px;
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    color: rgba(255,255,255,0.5);
+  }
+
+  /* card body */
+  .card-body { padding: 14px 16px 16px; }
+  .card-car { font-size: 16px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 2px; }
+  .card-plate {
+    font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text2);
+    margin-bottom: 12px;
+  }
+
+  .card-info { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+  .card-row { display: flex; align-items: center; justify-content: space-between; }
+  .card-row-label { font-size: 12px; color: var(--text2); }
+  .card-row-val { font-size: 12px; font-weight: 500; color: var(--text); }
+
+  /* stage progress bar */
+  .stage-track {
+    display: flex; gap: 3px; margin-top: 4px;
+  }
+  .stage-seg {
+    flex: 1; height: 3px; border-radius: 2px; background: var(--bg4);
+    transition: background .3s;
+  }
+  .stage-seg.done { background: var(--green); }
+  .stage-seg.active { background: var(--blue); }
+  .stage-seg.delayed { background: var(--red); }
+
+  /* action buttons */
+  .card-actions { display: flex; gap: 8px; margin-top: 14px; }
+  .card-action-btn {
+    flex: 1; padding: 8px; border-radius: 10px;
+    border: 1px solid var(--border2); background: var(--bg3);
+    color: var(--text); font-size: 12px; font-weight: 500;
+    cursor: pointer; font-family: var(--sf); transition: all .15s;
+  }
+  .card-action-btn:hover { background: var(--bg4); }
+  .card-action-btn.primary { background: var(--blue); border-color: transparent; }
+  .card-action-btn.primary:hover { opacity: .85; }
+  .card-action-btn.danger { border-color: rgba(255,69,58,.3); color: var(--red); }
+
+  /* stage badge colors */
+  .stage-created { background: rgba(142,142,147,.15); color: #8e8e93; }
+  .stage-assigned { background: rgba(255,159,10,.15); color: var(--orange); }
+  .stage-inprogress { background: rgba(10,132,255,.15); color: var(--blue); }
+  .stage-inspection { background: rgba(191,90,242,.15); color: var(--purple); }
+  .stage-washing { background: rgba(48,209,88,.15); color: var(--green); }
+  .stage-done { background: rgba(48,209,88,.1); color: var(--green); }
+  .stage-delayed { background: rgba(255,69,58,.15); color: var(--red); }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    grid-column: 1/-1;
+    text-align: center; padding: 80px 20px;
+    color: var(--text3);
+  }
+  .empty-icon { font-size: 48px; margin-bottom: 16px; }
+  .empty-title { font-size: 18px; font-weight: 600; color: var(--text2); margin-bottom: 8px; }
+  .empty-sub { font-size: 14px; }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,.7); backdrop-filter: blur(12px);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--bg2); border: 1px solid var(--border2);
+    border-radius: 22px; padding: 28px;
+    width: 480px; max-width: calc(100vw - 32px);
+    max-height: 85vh; overflow-y: auto;
+    transform: scale(.95) translateY(10px);
+    transition: transform .22s cubic-bezier(.4,0,.2,1);
+  }
+  .modal-overlay.open .modal { transform: scale(1) translateY(0); }
+  .modal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+  .modal-title { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+  .modal-close {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--bg4); border: none; color: var(--text2);
+    font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: background .15s;
+  }
+  .modal-close:hover { background: var(--bg3); }
+
+  .form-group { margin-bottom: 16px; }
+  .form-label { font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; display: block; }
+  .form-input {
+    width: 100%; padding: 10px 14px;
+    background: var(--bg3); border: 1px solid var(--border2);
+    border-radius: 10px; color: var(--text); font-size: 14px;
+    font-family: var(--sf); outline: none; transition: border-color .15s;
+  }
+  .form-input:focus { border-color: var(--blue); }
+  .form-input::placeholder { color: var(--text3); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-submit {
+    width: 100%; padding: 12px; border-radius: 12px;
+    background: var(--blue); border: none; color: #fff;
+    font-size: 15px; font-weight: 600; cursor: pointer;
+    font-family: var(--sf); margin-top: 8px; transition: opacity .15s;
+  }
+  .form-submit:hover { opacity: .85; }
+
+  /* assign modal */
+  .mechanic-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .mechanic-btn {
+    padding: 12px 16px; border-radius: 12px;
+    background: var(--bg3); border: 1px solid var(--border);
+    color: var(--text); font-size: 14px; font-weight: 500;
+    cursor: pointer; text-align: left; font-family: var(--sf);
+    transition: all .15s; display: flex; align-items: center; gap: 10px;
+  }
+  .mechanic-btn:hover { background: var(--bg4); border-color: var(--border2); }
+  .mechanic-av { width: 32px; height: 32px; border-radius: 50%; background: var(--blue); display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+
+  /* log timeline */
+  .log-item { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .log-item:last-child { border-bottom: none; }
+  .log-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--blue); margin-top: 5px; flex-shrink: 0; }
+  .log-stage { font-size: 13px; font-weight: 600; color: var(--text); }
+  .log-person { font-size: 12px; color: var(--text2); }
+  .log-time { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <img class="topbar-logo" src="/logo.png" alt="Pagariya Auto" onerror="this.style.display='none'">
+    <div class="topbar-divider"></div>
+    <span class="topbar-title">Workshop Dashboard</span>
+  </div>
+  <div class="topbar-center">
+    <button class="tab-btn active" onclick="setTab('active',this)">Active Jobs</button>
+    <button class="tab-btn" onclick="setTab('completed',this)">Completed</button>
+  </div>
+  <div class="topbar-right">
+    <div class="live-dot"></div>
+    <span class="live-label">Live</span>
+    <button class="add-btn" onclick="openAddModal()">
+      <span>+</span> New Job
+    </button>
+  </div>
+</div>
+
+<!-- STATS BAR -->
+<div class="stats-bar">
+  <div class="stat-item">
+    <div class="stat-val" id="stat-active">0</div>
+    <div class="stat-label">Active Jobs</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-val green" id="stat-done">0</div>
+    <div class="stat-label">Completed Today</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-val red" id="stat-delayed">0</div>
+    <div class="stat-label">Delayed</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-val orange" id="stat-avgtime">—</div>
+    <div class="stat-label">Avg. Time Today</div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="section-header">
+    <span class="section-title" id="section-title">Active Jobs</span>
+    <span class="section-count" id="section-count">0 jobs</span>
+  </div>
+  <div class="job-grid" id="jobGrid"></div>
+</div>
+
+<!-- ADD JOB MODAL -->
+<div class="modal-overlay" id="addModal" onclick="closeModalOutside(event,'addModal')">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">New Job Card</span>
+      <button class="modal-close" onclick="closeModal('addModal')">✕</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Job Number</label>
+        <input class="form-input" id="f-jobnum" placeholder="e.g. #4821">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Car Number Plate</label>
+        <input class="form-input" id="f-carnum" placeholder="MH20 1234">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Car Model</label>
+        <input class="form-input" id="f-carmodel" placeholder="Maruti Swift">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Work Type</label>
+        <input class="form-input" id="f-worktype" placeholder="Oil change, Dent repair...">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Customer Name</label>
+        <input class="form-input" id="f-custname" placeholder="Full name">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Customer Phone</label>
+        <input class="form-input" id="f-custphone" placeholder="98XXXXXXXX">
+      </div>
+    </div>
+    <button class="form-submit" onclick="submitJob()">Create Job Card</button>
+  </div>
+</div>
+
+<!-- ASSIGN MODAL -->
+<div class="modal-overlay" id="assignModal" onclick="closeModalOutside(event,'assignModal')">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="assignModalTitle">Assign Mechanic</span>
+      <button class="modal-close" onclick="closeModal('assignModal')">✕</button>
+    </div>
+    <div class="mechanic-list" id="mechanicList"></div>
+    <input class="form-input" id="customMechanic" placeholder="Or type mechanic name..." style="margin-bottom:12px;">
+    <button class="form-submit" onclick="assignCustom()">Assign</button>
+  </div>
+</div>
+
+<!-- LOGS MODAL -->
+<div class="modal-overlay" id="logsModal" onclick="closeModalOutside(event,'logsModal')">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="logsModalTitle">Job Timeline</span>
+      <button class="modal-close" onclick="closeModal('logsModal')">✕</button>
+    </div>
+    <div id="logsList"></div>
+  </div>
+</div>
+
+<script>
+const STAGES = ['created','assigned','inprogress','inspection','washing','done'];
+const STAGE_LABELS = {
+  created: 'Created', assigned: 'Assigned', inprogress: 'In Progress',
+  inspection: 'Inspection', washing: 'Washing', done: 'Done', delayed: 'Delayed'
+};
+const MECHANICS = ['Raju','Suresh','Ramesh','Vijay','Manoj','Deepak'];
+
+let currentTab = 'active';
+let assigningJobId = null;
+let jobs = [];
+let lastJobsSignature = null;
+
+// ── CAR GRADIENT ───────────────────────────────
+function modelGradient(model) {
+  const palettes = [
+    ['#0d1b2a','#1b263b','#415a77'],
+    ['#1a0a2e','#2d1b69','#5c4b8a'],
+    ['#0a1628','#1c3a5e','#2e6b9e'],
+    ['#1a0a00','#3d1a02','#7b3f00'],
+    ['#0a1a0a','#1a3a1a','#2d5a2d'],
+    ['#1a1a0a','#3a3a1a','#5a5a00'],
+    ['#1a0a1a','#3a1a3a','#5a2d5a'],
+    ['#0a1a1a','#1a3a3a','#2d5a5a'],
+  ];
+  let h = 0;
+  for (let i = 0; i < model.length; i++) h = (h * 31 + model.charCodeAt(i)) >>> 0;
+  const [c1, c2, c3] = palettes[h % palettes.length];
+  return `linear-gradient(135deg, ${c1} 0%, ${c2} 50%, ${c3} 100%)`;
+}
+
+// ── TIMER ──────────────────────────────────────
+function timeSince(dateStr) {
+  const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
+  if (diff < 60) return diff + 's';
+  if (diff < 3600) return Math.floor(diff/60) + 'm';
+  const h = Math.floor(diff/3600), m = Math.floor((diff%3600)/60);
+  return h + 'h ' + (m>0?m+'m':'');
+}
+
+// ── STAGE PROGRESS ─────────────────────────────
+function stageIndex(stage) {
+  const idx = STAGES.indexOf(stage);
+  return idx === -1 ? 0 : idx;
+}
+
+function buildStageTrack(stage) {
+  const idx = stageIndex(stage);
+  return STAGES.map((s, i) => {
+    let cls = 'stage-seg';
+    if (i < idx) cls += ' done';
+    else if (i === idx) cls += (stage === 'delayed' ? ' delayed' : ' active');
+    return `<div class="${cls}"></div>`;
+  }).join('');
+}
+
+// ── RENDER CARD ────────────────────────────────
+function renderCard(job) {
+  const card = document.createElement('div');
+  card.className = 'job-card' + (job.current_stage === 'delayed' ? ' delayed' : '') + (job.current_stage === 'done' ? ' done' : '');
+  card.style.animationDelay = Math.random() * 0.15 + 's';
+
+  const gradient = modelGradient(job.car_model || 'Car');
+  const imgHtml = `<div class="card-img-gradient" style="background:${gradient}">
+    <span class="card-img-car-icon">🚗</span>
+    <span class="card-img-car-name">${(job.car_model || 'Unknown').toUpperCase()}</span>
+  </div>`;
+
+  const stageClass = 'stage-' + (job.current_stage || 'created').replace(' ','');
+  const stageLabel = STAGE_LABELS[job.current_stage] || job.current_stage;
+
+  const isActive = job.current_stage !== 'done';
+  const nextStageLabel = getNextStageLabel(job.current_stage);
+
+  card.innerHTML = `
+    <div class="card-img-wrap">
+      ${imgHtml}
+      <div class="card-img-overlay"></div>
+      <span class="card-stage-badge ${stageClass}">${stageLabel}</span>
+      <span class="card-timer">${isActive ? '⏱ ' + timeSince(job.updated_at || job.created_at) : '✓ Done'}</span>
+      <span class="card-job-num">${job.job_number}</span>
+    </div>
+    <div class="card-body">
+      <div class="card-car">${job.car_model || 'Unknown Car'}</div>
+      <div class="card-plate">${job.car_number}</div>
+      <div class="card-info">
+        <div class="card-row">
+          <span class="card-row-label">Work</span>
+          <span class="card-row-val">${job.work_type || '—'}</span>
+        </div>
+        <div class="card-row">
+          <span class="card-row-label">Mechanic</span>
+          <span class="card-row-val">${job.assigned_mechanic || 'Not assigned'}</span>
+        </div>
+        <div class="card-row">
+          <span class="card-row-label">Customer</span>
+          <span class="card-row-val">${job.customer_name || '—'}</span>
+        </div>
+      </div>
+      <div class="stage-track">${buildStageTrack(job.current_stage)}</div>
+      <div class="card-actions">
+        ${job.current_stage === 'created' ? `<button class="card-action-btn primary" onclick="openAssign(${job.id},'${job.car_model}')">Assign Mechanic</button>` : ''}
+        ${job.current_stage === 'assigned' ? `<button class="card-action-btn primary" onclick="advanceStage(${job.id},'inprogress')">Mark Started</button>` : ''}
+        ${job.current_stage === 'inprogress' ? `<button class="card-action-btn primary" onclick="advanceStage(${job.id},'inspection')">Send to Inspection</button>` : ''}
+        ${job.current_stage === 'inspection' ? `<button class="card-action-btn primary" onclick="advanceStage(${job.id},'washing')">Pass — Send to Wash</button>` : ''}
+        ${job.current_stage === 'washing' ? `<button class="card-action-btn primary" onclick="advanceStage(${job.id},'done')">Mark Done</button>` : ''}
+        ${isActive && job.current_stage !== 'created' ? `<button class="card-action-btn danger" onclick="markDelayed(${job.id})">⚠ Delay</button>` : ''}
+        <button class="card-action-btn" onclick="viewLogs(${job.id},'${job.car_model} ${job.car_number}')">Logs</button>
+      </div>
+    </div>`;
+
+  return card;
+}
+
+function getNextStageLabel(stage) {
+  const map = { created:'Assign', assigned:'Start', inprogress:'Inspection', inspection:'Wash', washing:'Done' };
+  return map[stage] || '';
+}
+
+// ── LOAD JOBS ──────────────────────────────────
+async function loadJobs() {
+  try {
+    const res = await fetch('/api/jobs');
+    jobs = await res.json();
+    updateStats();
+
+    const filtered = currentTab === 'active'
+      ? jobs.filter(j => j.current_stage !== 'done')
+      : jobs.filter(j => j.current_stage === 'done');
+    const sig = filtered.map(j => `${j.id}:${j.current_stage}:${j.assigned_mechanic||''}`).join('|');
+
+    if (sig !== lastJobsSignature) {
+      renderJobs();
+    }
+  } catch(e) { console.error(e); }
+}
+
+function renderJobs() {
+  const grid = document.getElementById('jobGrid');
+  grid.innerHTML = '';
+
+  const filtered = currentTab === 'active'
+    ? jobs.filter(j => j.current_stage !== 'done')
+    : jobs.filter(j => j.current_stage === 'done');
+
+  lastJobsSignature = filtered.map(j => `${j.id}:${j.current_stage}:${j.assigned_mechanic||''}`).join('|');
+
+  document.getElementById('section-title').textContent = currentTab === 'active' ? 'Active Jobs' : 'Completed Today';
+  document.getElementById('section-count').textContent = filtered.length + ' job' + (filtered.length !== 1 ? 's' : '');
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">${currentTab === 'active' ? '🎉' : '📋'}</div>
+      <div class="empty-title">${currentTab === 'active' ? 'No active jobs' : 'No completed jobs today'}</div>
+      <div class="empty-sub">${currentTab === 'active' ? 'Add a new job card to get started' : 'Completed jobs will appear here'}</div>
+    </div>`;
+    return;
+  }
+
+  for (const job of filtered) {
+    grid.appendChild(renderCard(job));
+  }
+}
+
+function updateStats() {
+  const active = jobs.filter(j => j.current_stage !== 'done').length;
+  const done = jobs.filter(j => j.current_stage === 'done').length;
+  const delayed = jobs.filter(j => j.current_stage === 'delayed').length;
+  document.getElementById('stat-active').textContent = active;
+  document.getElementById('stat-done').textContent = done;
+  document.getElementById('stat-delayed').textContent = delayed;
+}
+
+// ── TAB ────────────────────────────────────────
+function setTab(tab, btn) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  lastJobsSignature = null;
+  renderJobs();
+}
+
+// ── ADD JOB ────────────────────────────────────
+function openAddModal() { document.getElementById('addModal').classList.add('open'); }
+
+async function submitJob() {
+  const body = {
+    job_number: document.getElementById('f-jobnum').value.trim(),
+    car_number: document.getElementById('f-carnum').value.trim(),
+    car_model: document.getElementById('f-carmodel').value.trim(),
+    work_type: document.getElementById('f-worktype').value.trim(),
+    customer_name: document.getElementById('f-custname').value.trim(),
+    customer_phone: document.getElementById('f-custphone').value.trim(),
+  };
+  if (!body.job_number || !body.car_number || !body.car_model) { alert('Job number, car number and car model are required.'); return; }
+  await fetch('/api/jobs', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  closeModal('addModal');
+  ['f-jobnum','f-carnum','f-carmodel','f-worktype','f-custname','f-custphone'].forEach(id => document.getElementById(id).value = '');
+  loadJobs();
+}
+
+// ── ASSIGN ─────────────────────────────────────
+function openAssign(jobId, carModel) {
+  assigningJobId = jobId;
+  document.getElementById('assignModalTitle').textContent = 'Assign — ' + carModel;
+  const list = document.getElementById('mechanicList');
+  list.innerHTML = MECHANICS.map(m => `
+    <button class="mechanic-btn" onclick="assignMechanic('${m}')">
+      <div class="mechanic-av">🔧</div>${m}
+    </button>`).join('');
+  document.getElementById('assignModal').classList.add('open');
+}
+
+async function assignMechanic(name) {
+  await fetch(`/api/jobs/${assigningJobId}/assign`, {
+    method: 'PATCH', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ mechanic: name })
+  });
+  closeModal('assignModal');
+  loadJobs();
+}
+
+function assignCustom() {
+  const val = document.getElementById('customMechanic').value.trim();
+  if (val) assignMechanic(val);
+}
+
+// ── ADVANCE STAGE ──────────────────────────────
+async function advanceStage(jobId, stage) {
+  await fetch(`/api/jobs/${jobId}/stage`, {
+    method: 'PATCH', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ stage, person: 'supervisor', note: '' })
+  });
+  loadJobs();
+}
+
+async function markDelayed(jobId) {
+  const note = prompt('Reason for delay?') || 'No reason given';
+  await fetch(`/api/jobs/${jobId}/stage`, {
+    method: 'PATCH', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ stage: 'delayed', person: 'supervisor', note })
+  });
+  loadJobs();
+}
+
+// ── LOGS ───────────────────────────────────────
+async function viewLogs(jobId, title) {
+  document.getElementById('logsModalTitle').textContent = title;
+  const res = await fetch(`/api/jobs/${jobId}/logs`);
+  const logs = await res.json();
+  const list = document.getElementById('logsList');
+  list.innerHTML = logs.length === 0 ? '<p style="color:var(--text3);font-size:13px;">No logs yet.</p>'
+    : logs.map(l => `
+      <div class="log-item">
+        <div class="log-dot"></div>
+        <div>
+          <div class="log-stage">${STAGE_LABELS[l.stage] || l.stage}</div>
+          <div class="log-person">${l.person || '—'} ${l.note ? '· ' + l.note : ''}</div>
+          <div class="log-time">${new Date(l.timestamp).toLocaleString('en-IN')}</div>
+        </div>
+      </div>`).join('');
+  document.getElementById('logsModal').classList.add('open');
+}
+
+// ── MODAL UTILS ────────────────────────────────
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function closeModalOutside(e, id) { if (e.target === document.getElementById(id)) closeModal(id); }
+
+// ── AUTO REFRESH ───────────────────────────────
+loadJobs();
+setInterval(loadJobs, 15000);
+</script>
+</body>
+</html>
