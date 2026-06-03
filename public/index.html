@@ -349,6 +349,12 @@
   }
   .mechanic-del-btn:hover { background: rgba(255,69,58,.2); }
   .settings-add-form { margin-top: 16px; }
+  .worker-role-badge {
+    font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px;
+    background: rgba(10,132,255,.15); color: var(--blue);
+    border: 1px solid rgba(10,132,255,.25); margin-top: 3px; display: inline-block;
+  }
+  .mechanic-av { font-size: 18px; }
 
   /* ── SEARCH ── */
   .search-wrap { position: relative; margin-bottom: 18px; }
@@ -544,6 +550,35 @@
             </div>
           </div>
           <button class="form-submit" onclick="addMechanic()">Add Mechanic</button>
+        </div>
+      </div>
+
+      <div class="settings-sec">
+        <div class="settings-sec-hdr">Workers</div>
+        <div id="workersMgmtList"></div>
+        <div class="settings-add-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Name</label>
+              <input class="form-input" id="s-wrkname" placeholder="Worker name">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Phone</label>
+              <input class="form-input" id="s-wrkphone" placeholder="+91XXXXXXXXXX">
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:12px;">
+            <label class="form-label">Role</label>
+            <select class="form-input" id="s-wrkrole">
+              <option value="">Select role…</option>
+              <option value="jobcard_creator">Jobcard Creator</option>
+              <option value="supervisor">Supervisor</option>
+              <option value="mechanic">Mechanic</option>
+              <option value="inspector">Inspector</option>
+              <option value="washer">Washer</option>
+            </select>
+          </div>
+          <button class="form-submit" onclick="addWorker()">Add Worker</button>
         </div>
       </div>
     </div>
@@ -882,6 +917,7 @@ function closeModalOutside(e, id) { if (e.target === document.getElementById(id)
 function openSettings() {
   document.getElementById('settingsOverlay').classList.add('open');
   loadMechanicsSettings();
+  loadWorkersSettings();
 }
 
 function closeSettings() {
@@ -931,6 +967,61 @@ async function addMechanic() {
 async function removeMechanic(id) {
   await fetch(`/api/mechanics/${id}`, { method: 'DELETE' });
   loadMechanicsSettings();
+}
+
+// ── WORKERS SETTINGS ───────────────────────────
+const ROLE_LABELS = {
+  jobcard_creator: 'Jobcard Creator',
+  supervisor: 'Supervisor',
+  mechanic: 'Mechanic',
+  inspector: 'Inspector',
+  washer: 'Washer'
+};
+
+async function loadWorkersSettings() {
+  const list = document.getElementById('workersMgmtList');
+  try {
+    const res = await fetch('/api/workers');
+    const workers = await res.json();
+    list.innerHTML = workers.length === 0
+      ? '<p style="color:var(--text3);font-size:13px;padding:4px 0;">No workers yet.</p>'
+      : workers.map(w => `
+          <div class="mechanic-row">
+            <div class="mechanic-av">👤</div>
+            <div class="mechanic-row-info">
+              <div class="mechanic-row-name">${w.name}</div>
+              <div class="mechanic-row-spec">${w.phone}</div>
+              <span class="worker-role-badge">${ROLE_LABELS[w.role] || w.role}</span>
+            </div>
+            <button class="mechanic-del-btn" onclick="removeWorker(${w.id})">Remove</button>
+          </div>`).join('');
+  } catch {
+    list.innerHTML = '<p style="color:var(--text3);font-size:13px;">Could not load workers.</p>';
+  }
+}
+
+async function addWorker() {
+  const name = document.getElementById('s-wrkname').value.trim();
+  const phone = document.getElementById('s-wrkphone').value.trim();
+  const role = document.getElementById('s-wrkrole').value;
+  if (!name) { alert('Worker name is required.'); return; }
+  if (!phone) { alert('Phone number is required.'); return; }
+  if (!role) { alert('Please select a role.'); return; }
+  const res = await fetch('/api/workers', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ name, phone, role })
+  });
+  const data = await res.json();
+  if (data.error) { alert(data.error); return; }
+  document.getElementById('s-wrkname').value = '';
+  document.getElementById('s-wrkphone').value = '';
+  document.getElementById('s-wrkrole').value = '';
+  loadWorkersSettings();
+}
+
+async function removeWorker(id) {
+  await fetch(`/api/workers/${id}`, { method: 'DELETE' });
+  loadWorkersSettings();
 }
 
 // ── TIMERS ─────────────────────────────────────

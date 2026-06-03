@@ -35,6 +35,13 @@ db.exec(`
     speciality TEXT DEFAULT '',
     active INTEGER DEFAULT 1
   );
+
+  CREATE TABLE IF NOT EXISTS workers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    phone TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
+    role TEXT NOT NULL
+  );
 `);
 
 const seedMechanics = ['Raju', 'Suresh', 'Ramesh', 'Vijay', 'Manoj', 'Deepak'];

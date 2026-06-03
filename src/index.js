@@ -2,12 +2,14 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const db = require('./db/database');
+const whatsapp = require('./whatsapp');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
+app.use(whatsapp);
 
 // Get all active jobs
 app.get('/api/jobs', (req, res) => {
@@ -100,6 +102,32 @@ app.post('/api/mechanics', (req, res) => {
 // Remove a mechanic (soft delete)
 app.delete('/api/mechanics/:id', (req, res) => {
   db.prepare(`UPDATE mechanics SET active = 0 WHERE id = ?`).run(req.params.id);
+  res.json({ success: true });
+});
+
+// Get all workers
+app.get('/api/workers', (req, res) => {
+  const workers = db.prepare(`SELECT * FROM workers ORDER BY name ASC`).all();
+  res.json(workers);
+});
+
+// Add a worker
+app.post('/api/workers', (req, res) => {
+  const { phone, name, role } = req.body;
+  if (!phone?.trim()) return res.status(400).json({ error: 'Phone is required' });
+  if (!name?.trim()) return res.status(400).json({ error: 'Name is required' });
+  if (!role?.trim()) return res.status(400).json({ error: 'Role is required' });
+  try {
+    const result = db.prepare(`INSERT INTO workers (phone, name, role) VALUES (?, ?, ?)`).run(phone.trim(), name.trim(), role.trim());
+    res.json({ success: true, id: result.lastInsertRowid });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Remove a worker
+app.delete('/api/workers/:id', (req, res) => {
+  db.prepare(`DELETE FROM workers WHERE id = ?`).run(req.params.id);
   res.json({ success: true });
 });
 
