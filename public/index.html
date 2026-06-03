@@ -349,6 +349,28 @@
   }
   .mechanic-del-btn:hover { background: rgba(255,69,58,.2); }
   .settings-add-form { margin-top: 16px; }
+
+  /* ── SEARCH ── */
+  .search-wrap { position: relative; margin-bottom: 18px; }
+  .search-input {
+    width: 100%; padding: 10px 14px 10px 40px;
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 12px; color: var(--text); font-size: 14px;
+    font-family: var(--sf); outline: none; transition: border-color .15s;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2348484a' stroke-width='2.5'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: 13px center;
+  }
+  .search-input:focus { border-color: var(--border2); }
+  .search-input::placeholder { color: var(--text3); }
+  .search-input::-webkit-search-cancel-button { cursor: pointer; }
+
+  /* ── DELAY SELECT ── */
+  select.form-input {
+    appearance: none; -webkit-appearance: none; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238e8e93' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center;
+  }
+  select.form-input option { background: var(--bg3); color: var(--text); }
 </style>
 </head>
 <body>
@@ -361,8 +383,8 @@
     <span class="topbar-title">Workshop Dashboard</span>
   </div>
   <div class="topbar-center">
-    <button class="tab-btn active" onclick="setTab('active',this)">Active Jobs</button>
-    <button class="tab-btn" onclick="setTab('completed',this)">Completed</button>
+    <button class="tab-btn active" data-tab="active" onclick="setTab('active',this)">Active Jobs</button>
+    <button class="tab-btn" data-tab="completed" onclick="setTab('completed',this)">Completed</button>
   </div>
   <div class="topbar-right">
     <div class="live-dot"></div>
@@ -396,6 +418,11 @@
 
 <!-- MAIN -->
 <div class="main">
+  <div class="search-wrap">
+    <input class="search-input" id="searchInput" type="search"
+      placeholder="Search by job #, car model, plate or mechanic…"
+      oninput="applySearch(this.value)">
+  </div>
   <div class="section-header">
     <span class="section-title" id="section-title">Active Jobs</span>
     <span class="section-count" id="section-count">0 jobs</span>
@@ -468,6 +495,32 @@
   </div>
 </div>
 
+<!-- DELAY MODAL -->
+<div class="modal-overlay" id="delayModal" onclick="closeModalOutside(event,'delayModal')">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Mark as Delayed</span>
+      <button class="modal-close" onclick="closeModal('delayModal')">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Reason for Delay</label>
+      <select class="form-input" id="delay-reason" onchange="toggleDelayOther()">
+        <option value="">Select a reason…</option>
+        <option>Waiting for Parts</option>
+        <option>Customer Approval Pending</option>
+        <option>Mechanic Unavailable</option>
+        <option>Technical Issue</option>
+        <option>Other</option>
+      </select>
+    </div>
+    <div class="form-group" id="delay-other-wrap" style="display:none">
+      <label class="form-label">Specify</label>
+      <input class="form-input" id="delay-other" placeholder="Enter reason…">
+    </div>
+    <button class="form-submit" onclick="submitDelay()">Confirm Delay</button>
+  </div>
+</div>
+
 <!-- SETTINGS PANEL -->
 <div class="settings-overlay" id="settingsOverlay" onclick="closeSettingsOutside(event)">
   <div class="settings-panel">
@@ -505,8 +558,10 @@ const STAGE_LABELS = {
 };
 let currentTab = 'active';
 let assigningJobId = null;
+let delayingJobId = null;
 let jobs = [];
 let lastJobsSignature = null;
+let searchQuery = '';
 
 // ── CAR GRADIENT ───────────────────────────────
 function modelGradient(model) {
@@ -577,7 +632,7 @@ function renderCard(job) {
       ${imgHtml}
       <div class="card-img-overlay"></div>
       <span class="card-stage-badge ${stageClass}">${stageLabel}</span>
-      <span class="card-timer">${isActive ? '⏱ ' + timeSince(job.updated_at || job.created_at) : '✓ Done'}</span>
+      ${isActive ? `<span class="card-timer" data-start="${job.created_at}">⏱ ${timeSince(job.created_at)}</span>` : '<span class="card-timer">✓ Done</span>'}
       <span class="card-job-num">${job.job_number}</span>
     </div>
     <div class="card-body">
@@ -639,20 +694,30 @@ function renderJobs() {
   const grid = document.getElementById('jobGrid');
   grid.innerHTML = '';
 
-  const filtered = currentTab === 'active'
+  const tabFiltered = currentTab === 'active'
     ? jobs.filter(j => j.current_stage !== 'done')
     : jobs.filter(j => j.current_stage === 'done');
 
-  lastJobsSignature = filtered.map(j => `${j.id}:${j.current_stage}:${j.assigned_mechanic||''}`).join('|');
+  lastJobsSignature = tabFiltered.map(j => `${j.id}:${j.current_stage}:${j.assigned_mechanic||''}`).join('|');
+
+  const filtered = searchQuery
+    ? tabFiltered.filter(j =>
+        (j.car_number        || '').toLowerCase().includes(searchQuery) ||
+        (j.car_model         || '').toLowerCase().includes(searchQuery) ||
+        (j.assigned_mechanic || '').toLowerCase().includes(searchQuery) ||
+        (j.job_number        || '').toLowerCase().includes(searchQuery)
+      )
+    : tabFiltered;
 
   document.getElementById('section-title').textContent = currentTab === 'active' ? 'Active Jobs' : 'Completed Today';
   document.getElementById('section-count').textContent = filtered.length + ' job' + (filtered.length !== 1 ? 's' : '');
 
   if (filtered.length === 0) {
+    const noMatch = searchQuery && tabFiltered.length > 0;
     grid.innerHTML = `<div class="empty-state">
-      <div class="empty-icon">${currentTab === 'active' ? '🎉' : '📋'}</div>
-      <div class="empty-title">${currentTab === 'active' ? 'No active jobs' : 'No completed jobs today'}</div>
-      <div class="empty-sub">${currentTab === 'active' ? 'Add a new job card to get started' : 'Completed jobs will appear here'}</div>
+      <div class="empty-icon">${noMatch ? '🔍' : (currentTab === 'active' ? '🎉' : '📋')}</div>
+      <div class="empty-title">${noMatch ? 'No matching jobs' : (currentTab === 'active' ? 'No active jobs' : 'No completed jobs today')}</div>
+      <div class="empty-sub">${noMatch ? 'Try a different search term' : (currentTab === 'active' ? 'Add a new job card to get started' : 'Completed jobs will appear here')}</div>
     </div>`;
     return;
   }
@@ -677,6 +742,21 @@ function setTab(tab, btn) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   lastJobsSignature = null;
+  renderJobs();
+}
+
+function switchToTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === tab);
+  });
+  lastJobsSignature = null;
+  renderJobs();
+}
+
+// ── SEARCH ─────────────────────────────────────
+function applySearch(val) {
+  searchQuery = val.toLowerCase();
   renderJobs();
 }
 
@@ -744,15 +824,34 @@ async function advanceStage(jobId, stage) {
     method: 'PATCH', headers: {'Content-Type':'application/json'},
     body: JSON.stringify({ stage, person: 'supervisor', note: '' })
   });
-  loadJobs();
+  await loadJobs();
+  if (stage === 'done') switchToTab('completed');
 }
 
-async function markDelayed(jobId) {
-  const note = prompt('Reason for delay?') || 'No reason given';
-  await fetch(`/api/jobs/${jobId}/stage`, {
+function markDelayed(jobId) {
+  delayingJobId = jobId;
+  document.getElementById('delay-reason').value = '';
+  document.getElementById('delay-other-wrap').style.display = 'none';
+  document.getElementById('delay-other').value = '';
+  document.getElementById('delayModal').classList.add('open');
+}
+
+function toggleDelayOther() {
+  const isOther = document.getElementById('delay-reason').value === 'Other';
+  document.getElementById('delay-other-wrap').style.display = isOther ? 'block' : 'none';
+}
+
+async function submitDelay() {
+  const reason = document.getElementById('delay-reason').value;
+  if (!reason) { alert('Please select a reason for the delay.'); return; }
+  const note = reason === 'Other'
+    ? (document.getElementById('delay-other').value.trim() || 'Other')
+    : reason;
+  await fetch(`/api/jobs/${delayingJobId}/stage`, {
     method: 'PATCH', headers: {'Content-Type':'application/json'},
     body: JSON.stringify({ stage: 'delayed', person: 'supervisor', note })
   });
+  closeModal('delayModal');
   loadJobs();
 }
 
@@ -834,8 +933,16 @@ async function removeMechanic(id) {
   loadMechanicsSettings();
 }
 
+// ── TIMERS ─────────────────────────────────────
+function tickTimers() {
+  document.querySelectorAll('.card-timer[data-start]').forEach(el => {
+    el.textContent = '⏱ ' + timeSince(el.dataset.start);
+  });
+}
+
 // ── AUTO REFRESH ───────────────────────────────
 loadJobs();
+setInterval(tickTimers, 1000);
 setInterval(loadJobs, 15000);
 </script>
 </body>
