@@ -576,6 +576,7 @@
               <option value="mechanic">Mechanic</option>
               <option value="inspector">Inspector</option>
               <option value="washer">Washer</option>
+              <option value="all">All Roles (Admin/Tester)</option>
             </select>
           </div>
           <button class="form-submit" onclick="addWorker()">Add Worker</button>
@@ -975,7 +976,8 @@ const ROLE_LABELS = {
   supervisor: 'Supervisor',
   mechanic: 'Mechanic',
   inspector: 'Inspector',
-  washer: 'Washer'
+  washer: 'Washer',
+  all: 'All Roles (Admin/Tester)'
 };
 
 async function loadWorkersSettings() {

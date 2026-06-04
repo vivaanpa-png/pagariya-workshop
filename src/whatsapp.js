@@ -11,18 +11,22 @@
  *
  * Workers must be registered in the `workers` table with their WhatsApp phone
  * number (E.164 format, e.g. +919876543210), name, and one of these roles:
- *   jobcard_creator | supervisor | mechanic | inspector | washer
+ *   jobcard_creator | supervisor | mechanic | inspector | washer | all
+ *
+ * A phone number may have multiple rows in the workers table (different roles).
+ * Role "all" acts in every stage. When multiple roles exist for one phone,
+ * the system picks the entry whose role matches the current job stage.
  *
  * Stage flow: created → assigned → inprogress → qc → wash → done
- *   failed_qc loops back: mechanic sends "1" → inprogress → "2" → qc again
+ *   failed_qc loops back: mechanic sends "2" → qc again
  *
  * Commands:
- *   [photo + caption]   jobcard_creator/supervisor: create job
+ *   [photo + caption]   jobcard_creator/supervisor/all: create job
  *                       Caption format: JOB001 KA01AB1234 Toyota_Fortuner Oil_Change
- *   assign [name]       supervisor: assign mechanic to newest unassigned job
- *   1                   mechanic: start their assigned job
- *   2                   mechanic/inspector/washer: advance to next stage
- *   3                   inspector: fail QC, send back to mechanic
+ *   assign [name]       supervisor/all: assign mechanic to newest unassigned job
+ *   1                   mechanic/inspector/washer/all: acknowledge/start active job
+ *   2                   mechanic/inspector/washer/all: advance to next stage
+ *   3                   inspector/all: fail inspection, send back to mechanic
  *   delay [reason]      any worker: report delay on current job
  *   status              any worker: list all active jobs
  */
@@ -44,43 +48,86 @@ function sendWhatsApp(to, body) {
     .catch(err => console.error(`WhatsApp send error to ${toFormatted}:`, err.message));
 }
 
-function getWorkerByPhone(rawFrom) {
+// Returns all worker rows registered to this phone number.
+function getWorkersByPhone(rawFrom) {
   const phone = rawFrom.replace('whatsapp:', '');
-  return db.prepare('SELECT * FROM workers WHERE phone = ?').get(phone);
+  return db.prepare('SELECT * FROM workers WHERE phone = ?').all(phone);
+}
+
+// Returns the worker entry that can act as the given role:
+// prefers an exact role match, falls back to an 'all' entry, otherwise null.
+function getWorkerAs(workers, role) {
+  return workers.find(w => w.role === role)
+      || workers.find(w => w.role === 'all')
+      || null;
+}
+
+// Returns a short label like "KA01AB1234 Toyota Fortuner"
+function carLabel(job) {
+  return job.car_model ? `${job.car_number} ${job.car_model}` : job.car_number;
 }
 
 function notifyNextStage(job) {
-  const { current_stage: stage, job_number, car_number, car_model, work_type, assigned_mechanic } = job;
+  const { current_stage: stage, id, job_number } = job;
+  const label = carLabel(job);
 
   if (stage === 'created') {
-    const supervisors = db.prepare(`SELECT * FROM workers WHERE role = 'supervisor'`).all();
+    const supervisors = db.prepare(`SELECT * FROM workers WHERE role IN ('supervisor', 'all')`).all();
     for (const s of supervisors) {
-      sendWhatsApp(s.phone, `New job: ${job_number} | ${car_number} | ${car_model || ''} | ${work_type || ''}\nReply "assign [mechanic name]" to assign.`);
+      sendWhatsApp(s.phone,
+        `New job created: #${job_number} | ${label} | ${job.work_type || ''}\nReply "assign [mechanic name]" to assign.`
+      );
     }
+
   } else if (stage === 'assigned') {
-    const mechanic = db.prepare(`SELECT * FROM workers WHERE name = ? AND role = 'mechanic'`).get(assigned_mechanic);
+    // Mechanic may be registered as 'mechanic' or 'all'
+    const mechanic = db.prepare(
+      `SELECT * FROM workers WHERE name = ? AND role IN ('mechanic', 'all') LIMIT 1`
+    ).get(job.assigned_mechanic);
     if (mechanic) {
-      sendWhatsApp(mechanic.phone, `Job assigned to you: ${job_number} | ${car_number} | ${car_model || ''}\nWork: ${work_type || ''}\nReply "1" to start, "2" when done.`);
+      sendWhatsApp(mechanic.phone,
+        `Job assigned to you: #${job_number} | ${label}\nWork: ${job.work_type || ''}\nReply 1 to start, 2 when done.`
+      );
     }
-  } else if (stage === 'failed_qc') {
-    const mechanic = db.prepare(`SELECT * FROM workers WHERE name = ? AND role = 'mechanic'`).get(assigned_mechanic);
-    if (mechanic) {
-      sendWhatsApp(mechanic.phone, `Job ${job_number} (${car_number}) failed QC inspection. Please fix it.\nReply "1" to start working on it again.`);
-    }
+
   } else if (stage === 'qc') {
-    const inspectors = db.prepare(`SELECT * FROM workers WHERE role = 'inspector'`).all();
-    for (const i of inspectors) {
-      sendWhatsApp(i.phone, `Job ready for QC: ${job_number} | ${car_number}\nReply "2" to pass, "3" to fail.`);
+    const inspector = db.prepare(
+      `SELECT * FROM workers WHERE role IN ('inspector', 'all') LIMIT 1`
+    ).get();
+    if (inspector) {
+      db.prepare(`UPDATE jobs SET assigned_inspector = ? WHERE id = ?`).run(inspector.name, id);
+      sendWhatsApp(inspector.phone,
+        `🔍 Job #${job_number} ${label} is ready for inspection.\nReply 1 to start, 2 to pass, 3 to fail.`
+      );
     }
+
+  } else if (stage === 'failed_qc') {
+    const mechanic = db.prepare(
+      `SELECT * FROM workers WHERE name = ? AND role IN ('mechanic', 'all') LIMIT 1`
+    ).get(job.assigned_mechanic);
+    if (mechanic) {
+      sendWhatsApp(mechanic.phone,
+        `❌ Job #${job_number} ${label} failed inspection. Please fix and reply 2 when done again.`
+      );
+    }
+
   } else if (stage === 'wash') {
-    const washers = db.prepare(`SELECT * FROM workers WHERE role = 'washer'`).all();
-    for (const w of washers) {
-      sendWhatsApp(w.phone, `Job ready for wash: ${job_number} | ${car_number}\nReply "2" when done.`);
+    const washer = db.prepare(
+      `SELECT * FROM workers WHERE role IN ('washer', 'all') LIMIT 1`
+    ).get();
+    if (washer) {
+      db.prepare(`UPDATE jobs SET assigned_washer = ? WHERE id = ?`).run(washer.name, id);
+      sendWhatsApp(washer.phone,
+        `🚿 Job #${job_number} ${label} passed inspection. Ready for washing.\nReply 1 to start, 2 when done.`
+      );
     }
+
   } else if (stage === 'done') {
-    const notify = db.prepare(`SELECT * FROM workers WHERE role IN ('supervisor', 'jobcard_creator')`).all();
-    for (const n of notify) {
-      sendWhatsApp(n.phone, `Job completed: ${job_number} | ${car_number} | ${car_model || ''}`);
+    const supervisors = db.prepare(`SELECT * FROM workers WHERE role IN ('supervisor', 'all')`).all();
+    for (const s of supervisors) {
+      sendWhatsApp(s.phone,
+        `✅ Job #${job_number} ${label} is complete and ready for customer pickup.`
+      );
     }
   }
 }
@@ -102,23 +149,23 @@ router.post('/webhook/whatsapp', (req, res) => {
 
   const twiml = new twilio.twiml.MessagingResponse();
 
-  const worker = getWorkerByPhone(from);
-  if (!worker) {
+  const workers = getWorkersByPhone(from);
+  if (!workers.length) {
     twiml.message('You are not registered in the system. Contact your supervisor.');
     return res.type('text/xml').send(twiml.toString());
   }
 
   const lower = body.toLowerCase();
 
-  // Photo with caption → create job
+  // ── Photo with caption → create job ─────────────────────────────────────────
   if (numMedia > 0 && (mediaType.startsWith('image/') || mediaType === 'application/octet-stream')) {
-    if (worker.role !== 'jobcard_creator' && worker.role !== 'supervisor') {
+    const creator = getWorkerAs(workers, 'jobcard_creator') || getWorkerAs(workers, 'supervisor');
+    if (!creator) {
       twiml.message('Only job card creators can create jobs via photo.');
       return res.type('text/xml').send(twiml.toString());
     }
 
     // Caption format: JOB001 KA01AB1234 Toyota_Fortuner Oil_Change
-    // Underscores in model/work_type are converted to spaces
     const parts = body.trim().split(/\s+/);
     const job_number = parts[0] || `JOB${Date.now()}`;
     const car_number = parts[1] || 'UNKNOWN';
@@ -131,11 +178,11 @@ router.post('/webhook/whatsapp', (req, res) => {
         VALUES (?, ?, ?, ?, 'created')
       `).run(job_number, car_number, car_model, work_type);
 
-      db.prepare(`INSERT INTO stage_logs (job_id, stage, person, action) VALUES (?, 'created', ?, 'Created via WhatsApp photo')`).run(result.lastInsertRowid, worker.name);
+      db.prepare(`INSERT INTO stage_logs (job_id, stage, person, action) VALUES (?, 'created', ?, 'Created via WhatsApp photo')`).run(result.lastInsertRowid, creator.name);
 
       const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(result.lastInsertRowid);
       notifyNextStage(job);
-      twiml.message(`Job created: ${job_number} | ${car_number} | ${car_model} | ${work_type}`);
+      twiml.message(`Job created: #${job_number} | ${car_number} | ${car_model} | ${work_type}`);
     } catch (err) {
       twiml.message(`Failed to create job: ${err.message}`);
     }
@@ -143,114 +190,191 @@ router.post('/webhook/whatsapp', (req, res) => {
     return res.type('text/xml').send(twiml.toString());
   }
 
-  // assign [mechanic name]
+  // ── assign [name] → supervisor assigns mechanic to newest unassigned job ────
   if (lower.startsWith('assign ')) {
-    if (worker.role !== 'supervisor') {
+    const asSupervisor = getWorkerAs(workers, 'supervisor');
+    if (!asSupervisor) {
       twiml.message('Only supervisors can assign mechanics.');
       return res.type('text/xml').send(twiml.toString());
     }
 
-    const mechanicName = body.slice(7).trim();
-    const job = db.prepare(`SELECT * FROM jobs WHERE current_stage = 'created' ORDER BY created_at DESC LIMIT 1`).get();
+    const nameInput = body.slice(7).trim();
 
+    // Case-insensitive partial match; include 'all'-role workers as eligible mechanics
+    const mechanic = db.prepare(
+      `SELECT * FROM workers WHERE role IN ('mechanic', 'all') AND name LIKE ? LIMIT 1`
+    ).get(`%${nameInput}%`);
+
+    if (!mechanic) {
+      twiml.message(`No mechanic found matching "${nameInput}". Check the name and try again.`);
+      return res.type('text/xml').send(twiml.toString());
+    }
+
+    const job = db.prepare(`SELECT * FROM jobs WHERE current_stage = 'created' ORDER BY created_at DESC LIMIT 1`).get();
     if (!job) {
       twiml.message('No unassigned jobs found.');
       return res.type('text/xml').send(twiml.toString());
     }
 
-    db.prepare(`UPDATE jobs SET assigned_mechanic = ?, current_stage = 'assigned', updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(mechanicName, job.id);
-    db.prepare(`INSERT INTO stage_logs (job_id, stage, person, action) VALUES (?, 'assigned', ?, 'Assigned via WhatsApp')`).run(job.id, worker.name);
+    db.prepare(`UPDATE jobs SET assigned_mechanic = ?, current_stage = 'assigned', updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(mechanic.name, job.id);
+    db.prepare(`INSERT INTO stage_logs (job_id, stage, person, action) VALUES (?, 'assigned', ?, 'Assigned via WhatsApp')`).run(job.id, asSupervisor.name);
 
     const updated = db.prepare('SELECT * FROM jobs WHERE id = ?').get(job.id);
     notifyNextStage(updated);
-    twiml.message(`Job ${job.job_number} assigned to ${mechanicName}.`);
+    twiml.message(`Job #${job.job_number} assigned to ${mechanic.name}. They've been notified.`);
     return res.type('text/xml').send(twiml.toString());
   }
 
-  // 1 → start job (mechanic)
+  // ── 1 → start / acknowledge active job ──────────────────────────────────────
   if (body === '1') {
-    if (worker.role !== 'mechanic') {
-      twiml.message('Only mechanics can start jobs.');
+    const asMechanic  = getWorkerAs(workers, 'mechanic');
+    const asInspector = getWorkerAs(workers, 'inspector');
+    const asWasher    = getWorkerAs(workers, 'washer');
+
+    if (!asMechanic && !asInspector && !asWasher) {
+      twiml.message('Command "1" is not available for your role.');
       return res.type('text/xml').send(twiml.toString());
     }
 
-    const job = db.prepare(`
-      SELECT * FROM jobs WHERE assigned_mechanic = ? AND current_stage IN ('assigned', 'failed_qc')
-      ORDER BY updated_at DESC LIMIT 1
-    `).get(worker.name);
+    // Find the first active job across all applicable roles, mechanic-first
+    let job = null, activeAs = null, activeWorker = null;
+
+    if (asMechanic) {
+      const j = db.prepare(
+        `SELECT * FROM jobs WHERE assigned_mechanic = ? AND current_stage IN ('assigned', 'failed_qc') ORDER BY updated_at DESC LIMIT 1`
+      ).get(asMechanic.name);
+      if (j) { job = j; activeAs = 'mechanic'; activeWorker = asMechanic; }
+    }
+    if (!job && asInspector) {
+      const j = db.prepare(
+        `SELECT * FROM jobs WHERE assigned_inspector = ? AND current_stage = 'qc' ORDER BY updated_at DESC LIMIT 1`
+      ).get(asInspector.name);
+      if (j) { job = j; activeAs = 'inspector'; activeWorker = asInspector; }
+    }
+    if (!job && asWasher) {
+      const j = db.prepare(
+        `SELECT * FROM jobs WHERE assigned_washer = ? AND current_stage = 'wash' ORDER BY updated_at DESC LIMIT 1`
+      ).get(asWasher.name);
+      if (j) { job = j; activeAs = 'washer'; activeWorker = asWasher; }
+    }
 
     if (!job) {
-      twiml.message('No assigned job found for you.');
+      twiml.message('No active job assigned to you.');
       return res.type('text/xml').send(twiml.toString());
     }
 
-    advanceJobStage(job.id, 'inprogress', worker.name);
-    twiml.message(`Job ${job.job_number} marked as in progress.`);
+    if (activeAs === 'mechanic') {
+      advanceJobStage(job.id, 'inprogress', activeWorker.name);
+      twiml.message(`Job #${job.job_number} marked as in progress. Reply 2 when done.`);
+    } else {
+      // Inspector/washer "1" is an acknowledgment — log it, stage stays the same
+      db.prepare(
+        `INSERT INTO stage_logs (job_id, stage, person, action) VALUES (?, ?, ?, 'Started via WhatsApp')`
+      ).run(job.id, job.current_stage, activeWorker.name);
+      const extra = activeAs === 'inspector' ? ', 3 to fail' : '';
+      twiml.message(`Got it! You're now working on Job #${job.job_number} (${job.car_number}). Reply 2 when done${extra}.`);
+    }
+
     return res.type('text/xml').send(twiml.toString());
   }
 
-  // 2 → done / advance to next stage
+  // ── 2 → advance job to next stage, notify next person ───────────────────────
   if (body === '2') {
-    let job = null;
-    let nextStage = null;
+    const asMechanic  = getWorkerAs(workers, 'mechanic');
+    const asInspector = getWorkerAs(workers, 'inspector');
+    const asWasher    = getWorkerAs(workers, 'washer');
 
-    if (worker.role === 'mechanic') {
-      job = db.prepare(`SELECT * FROM jobs WHERE assigned_mechanic = ? AND current_stage = 'inprogress' ORDER BY updated_at DESC LIMIT 1`).get(worker.name);
-      nextStage = 'qc';
-    } else if (worker.role === 'inspector') {
-      job = db.prepare(`SELECT * FROM jobs WHERE current_stage = 'qc' ORDER BY updated_at DESC LIMIT 1`).get();
-      nextStage = 'wash';
-    } else if (worker.role === 'washer') {
-      job = db.prepare(`SELECT * FROM jobs WHERE current_stage = 'wash' ORDER BY updated_at DESC LIMIT 1`).get();
-      nextStage = 'done';
-    } else {
+    if (!asMechanic && !asInspector && !asWasher) {
       twiml.message('Command "2" is not available for your role.');
       return res.type('text/xml').send(twiml.toString());
     }
 
+    let job = null, nextStage = null, activeWorker = null;
+
+    if (asMechanic) {
+      const j = db.prepare(
+        `SELECT * FROM jobs WHERE assigned_mechanic = ? AND current_stage = 'inprogress' ORDER BY updated_at DESC LIMIT 1`
+      ).get(asMechanic.name);
+      if (j) { job = j; nextStage = 'qc'; activeWorker = asMechanic; }
+    }
+    if (!job && asInspector) {
+      const j = db.prepare(
+        `SELECT * FROM jobs WHERE assigned_inspector = ? AND current_stage = 'qc' ORDER BY updated_at DESC LIMIT 1`
+      ).get(asInspector.name);
+      if (j) { job = j; nextStage = 'wash'; activeWorker = asInspector; }
+    }
+    if (!job && asWasher) {
+      const j = db.prepare(
+        `SELECT * FROM jobs WHERE assigned_washer = ? AND current_stage = 'wash' ORDER BY updated_at DESC LIMIT 1`
+      ).get(asWasher.name);
+      if (j) { job = j; nextStage = 'done'; activeWorker = asWasher; }
+    }
+
     if (!job) {
-      twiml.message('No active job found in the current stage for you.');
+      twiml.message('No active job found for you in the current stage.');
       return res.type('text/xml').send(twiml.toString());
     }
 
-    advanceJobStage(job.id, nextStage, worker.name);
-    twiml.message(`Job ${job.job_number} moved to ${nextStage}.`);
+    advanceJobStage(job.id, nextStage, activeWorker.name);
+    const stageLabels = { qc: 'inspection', wash: 'washing', done: 'complete' };
+    twiml.message(`Job #${job.job_number} moved to ${stageLabels[nextStage] || nextStage}. Next person has been notified.`);
     return res.type('text/xml').send(twiml.toString());
   }
 
-  // 3 → fail QC inspection
+  // ── 3 → inspector fails inspection ──────────────────────────────────────────
   if (body === '3') {
-    if (worker.role !== 'inspector') {
+    const asInspector = getWorkerAs(workers, 'inspector');
+    if (!asInspector) {
       twiml.message('Only inspectors can fail inspection.');
       return res.type('text/xml').send(twiml.toString());
     }
 
-    const job = db.prepare(`SELECT * FROM jobs WHERE current_stage = 'qc' ORDER BY updated_at DESC LIMIT 1`).get();
+    const job = db.prepare(
+      `SELECT * FROM jobs WHERE assigned_inspector = ? AND current_stage = 'qc' ORDER BY updated_at DESC LIMIT 1`
+    ).get(asInspector.name);
 
     if (!job) {
-      twiml.message('No job in QC stage found.');
+      twiml.message('No inspection job assigned to you.');
       return res.type('text/xml').send(twiml.toString());
     }
 
-    advanceJobStage(job.id, 'failed_qc', worker.name, 'Failed QC inspection');
-    twiml.message(`Job ${job.job_number} failed QC. Mechanic notified.`);
+    advanceJobStage(job.id, 'failed_qc', asInspector.name, 'Failed inspection');
+    twiml.message(`Job #${job.job_number} failed inspection. Mechanic has been notified to fix and resubmit.`);
     return res.type('text/xml').send(twiml.toString());
   }
 
-  // delay [reason]
+  // ── delay [reason] → log delay, notify supervisor ───────────────────────────
   if (lower.startsWith('delay ')) {
     const reason = body.slice(6).trim();
 
-    let job = null;
-    if (worker.role === 'mechanic') {
-      job = db.prepare(`SELECT * FROM jobs WHERE assigned_mechanic = ? AND current_stage IN ('assigned', 'inprogress', 'failed_qc') ORDER BY updated_at DESC LIMIT 1`).get(worker.name);
-    } else if (worker.role === 'inspector') {
-      job = db.prepare(`SELECT * FROM jobs WHERE current_stage = 'qc' ORDER BY updated_at DESC LIMIT 1`).get();
-    } else if (worker.role === 'washer') {
-      job = db.prepare(`SELECT * FROM jobs WHERE current_stage = 'wash' ORDER BY updated_at DESC LIMIT 1`).get();
-    } else {
+    const asMechanic  = getWorkerAs(workers, 'mechanic');
+    const asInspector = getWorkerAs(workers, 'inspector');
+    const asWasher    = getWorkerAs(workers, 'washer');
+
+    if (!asMechanic && !asInspector && !asWasher) {
       twiml.message('Delay command is not available for your role.');
       return res.type('text/xml').send(twiml.toString());
+    }
+
+    let job = null, activeWorker = null;
+
+    if (asMechanic) {
+      const j = db.prepare(
+        `SELECT * FROM jobs WHERE assigned_mechanic = ? AND current_stage IN ('assigned', 'inprogress', 'failed_qc') ORDER BY updated_at DESC LIMIT 1`
+      ).get(asMechanic.name);
+      if (j) { job = j; activeWorker = asMechanic; }
+    }
+    if (!job && asInspector) {
+      const j = db.prepare(
+        `SELECT * FROM jobs WHERE assigned_inspector = ? AND current_stage = 'qc' ORDER BY updated_at DESC LIMIT 1`
+      ).get(asInspector.name);
+      if (j) { job = j; activeWorker = asInspector; }
+    }
+    if (!job && asWasher) {
+      const j = db.prepare(
+        `SELECT * FROM jobs WHERE assigned_washer = ? AND current_stage = 'wash' ORDER BY updated_at DESC LIMIT 1`
+      ).get(asWasher.name);
+      if (j) { job = j; activeWorker = asWasher; }
     }
 
     if (!job) {
@@ -258,22 +382,24 @@ router.post('/webhook/whatsapp', (req, res) => {
       return res.type('text/xml').send(twiml.toString());
     }
 
-    db.prepare(`INSERT INTO stage_logs (job_id, stage, person, action, note) VALUES (?, ?, ?, 'Delay reported via WhatsApp', ?)`).run(job.id, job.current_stage, worker.name, `DELAY: ${reason}`);
+    db.prepare(
+      `INSERT INTO stage_logs (job_id, stage, person, action, note) VALUES (?, ?, ?, 'Delay reported via WhatsApp', ?)`
+    ).run(job.id, job.current_stage, activeWorker.name, `DELAY: ${reason}`);
 
-    const supervisors = db.prepare(`SELECT * FROM workers WHERE role = 'supervisor'`).all();
+    const supervisors = db.prepare(`SELECT * FROM workers WHERE role IN ('supervisor', 'all')`).all();
     for (const s of supervisors) {
-      sendWhatsApp(s.phone, `DELAY on Job ${job.job_number} (${job.car_number}) by ${worker.name}:\n${reason}`);
+      sendWhatsApp(s.phone, `⚠️ DELAY on Job #${job.job_number} (${job.car_number}) by ${activeWorker.name}:\n${reason}`);
     }
 
-    twiml.message(`Delay reported for Job ${job.job_number}. Supervisor notified.`);
+    twiml.message(`Delay reported for Job #${job.job_number}. Supervisor notified.`);
     return res.type('text/xml').send(twiml.toString());
   }
 
-  // status → list active jobs
+  // ── status → list active jobs ────────────────────────────────────────────────
   if (lower === 'status') {
-    const activeJobs = db.prepare(`
-      SELECT * FROM jobs WHERE current_stage != 'done' ORDER BY created_at DESC LIMIT 20
-    `).all();
+    const activeJobs = db.prepare(
+      `SELECT * FROM jobs WHERE current_stage != 'done' ORDER BY created_at DESC LIMIT 20`
+    ).all();
 
     if (activeJobs.length === 0) {
       twiml.message('No active jobs right now.');
@@ -281,21 +407,21 @@ router.post('/webhook/whatsapp', (req, res) => {
     }
 
     const lines = activeJobs.map(j =>
-      `${j.job_number} | ${j.car_number} | ${j.current_stage}${j.assigned_mechanic ? ` | ${j.assigned_mechanic}` : ''}`
+      `#${j.job_number} | ${j.car_number} | ${j.current_stage}${j.assigned_mechanic ? ` | ${j.assigned_mechanic}` : ''}`
     );
     twiml.message(`Active Jobs (${activeJobs.length}):\n${lines.join('\n')}`);
     return res.type('text/xml').send(twiml.toString());
   }
 
-  // Unknown command → help
+  // ── Unknown command → help ───────────────────────────────────────────────────
   twiml.message(
     'Commands:\n' +
     '  [photo + caption] – create job\n' +
-    '  assign [name] – assign mechanic\n' +
-    '  1 – start your job\n' +
-    '  2 – mark done / next stage\n' +
-    '  3 – fail QC inspection\n' +
-    '  delay [reason] – report delay\n' +
+    '  assign [name] – assign mechanic (supervisor only)\n' +
+    '  1 – start your assigned job\n' +
+    '  2 – mark done / advance to next stage\n' +
+    '  3 – fail inspection (inspector only)\n' +
+    '  delay [reason] – report a delay\n' +
     '  status – list active jobs'
   );
   return res.type('text/xml').send(twiml.toString());

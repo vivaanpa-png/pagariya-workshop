@@ -48,4 +48,8 @@ const seedMechanics = ['Raju', 'Suresh', 'Ramesh', 'Vijay', 'Manoj', 'Deepak'];
 const insertMechanic = db.prepare(`INSERT OR IGNORE INTO mechanics (name) VALUES (?)`);
 for (const name of seedMechanics) insertMechanic.run(name);
 
+// Add inspector/washer assignment columns if they don't exist yet
+try { db.exec(`ALTER TABLE jobs ADD COLUMN assigned_inspector TEXT`); } catch {}
+try { db.exec(`ALTER TABLE jobs ADD COLUMN assigned_washer TEXT`); } catch {}
+
 module.exports = db;
