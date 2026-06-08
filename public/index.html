@@ -3,440 +3,628 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pagariya Workshop</title>
+<title>Pagariya Auto Workshop</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0a0a0a;
-    --bg2: #141414;
-    --bg3: #1c1c1e;
-    --bg4: #2c2c2e;
-    --border: rgba(255,255,255,0.08);
-    --border2: rgba(255,255,255,0.14);
-    --text: #f2f2f7;
-    --text2: #8e8e93;
-    --text3: #48484a;
-    --red: #ff453a;
-    --green: #30d158;
-    --blue: #0a84ff;
-    --orange: #ff9f0a;
-    --yellow: #ffd60a;
-    --purple: #bf5af2;
-    --sf: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
+    --red:    #CC1E12;
+    --green:  #4CAF1A;
+    --page:   #F5F5F5;
+    --border: #E5E5E5;
+    --text:   #1A1A1A;
+    --text2:  #666666;
+    --text3:  #999999;
+    --white:  #FFFFFF;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 14px rgba(0,0,0,0.09);
+    --sf: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
-  body {
-    font-family: var(--sf);
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
+  body { font-family: var(--sf); background: var(--page); color: var(--text); min-height: 100vh; }
 
-  ::-webkit-scrollbar { width: 4px; }
-  ::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 2px; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #f1f1f1; }
+  ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
 
-  /* ── TOPBAR ── */
+  /* ══ TOPBAR ══════════════════════════════════════════ */
   .topbar {
-    position: sticky; top: 0; z-index: 100;
-    background: rgba(10,10,10,0.85);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: var(--white);
     border-bottom: 1px solid var(--border);
-    padding: 0 32px;
-    height: 56px;
-    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 32px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: var(--shadow);
   }
-  .topbar-left { display: flex; align-items: center; gap: 16px; }
-  .topbar-logo { height: 28px; object-fit: contain; filter: brightness(0) invert(1); opacity: 0.9; }
-  .topbar-divider { width: 1px; height: 20px; background: var(--border2); }
-  .topbar-title { font-size: 14px; font-weight: 600; color: var(--text); letter-spacing: -0.01em; }
-
-  .topbar-center { display: flex; gap: 2px; background: var(--bg3); border-radius: 9px; padding: 3px; }
-  .tab-btn {
-    padding: 5px 16px; border-radius: 7px; font-size: 13px; font-weight: 500;
-    border: none; background: none; cursor: pointer; color: var(--text2);
-    font-family: var(--sf); transition: all .15s;
+  .topbar-left { display: flex; align-items: center; }
+  .topbar-logo { height: 48px; object-fit: contain; }
+  .topbar-center {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 3px; text-align: center;
   }
-  .tab-btn.active { background: var(--bg4); color: var(--text); }
-
-  .topbar-right { display: flex; align-items: center; gap: 12px; }
-  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse-dot 2s infinite; }
+  .topbar-brand {
+    font-size: 38px; font-weight: 800; color: var(--red);
+    letter-spacing: 0.05em; line-height: 1.1; white-space: nowrap;
+  }
+  .topbar-tagline {
+    font-size: 12px; font-weight: 600; color: var(--green);
+    letter-spacing: 0.18em; text-transform: uppercase;
+  }
+  .topbar-date { font-size: 13px; font-weight: 400; color: var(--text3); }
+  .topbar-right {
+    display: flex; align-items: center;
+    justify-content: flex-end; gap: 10px;
+  }
+  .live-wrap { display: flex; align-items: center; gap: 6px; }
+  .live-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green); animation: pulse-dot 2s infinite; flex-shrink: 0;
+  }
   @keyframes pulse-dot { 0%,100%{opacity:1;} 50%{opacity:.4;} }
-  .live-label { font-size: 12px; color: var(--text2); }
+  .live-label { font-size: 12px; color: var(--text3); }
+  .gear-btn {
+    width: 36px; height: 36px; border-radius: 9px;
+    background: var(--page); border: 1px solid var(--border);
+    color: var(--text2); font-size: 16px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .15s; flex-shrink: 0;
+  }
+  .gear-btn:hover { background: #e8e8e8; }
   .add-btn {
     display: flex; align-items: center; gap: 6px;
-    padding: 7px 14px; border-radius: 9px;
-    background: var(--blue); border: none; color: #fff;
-    font-size: 13px; font-weight: 600; cursor: pointer;
-    font-family: var(--sf); transition: opacity .15s;
+    padding: 10px 20px; border-radius: 10px;
+    background: var(--red); border: none; color: #fff;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    font-family: var(--sf); transition: opacity .15s; white-space: nowrap;
   }
-  .add-btn:hover { opacity: 0.85; }
-
-  /* ── STATS BAR ── */
-  .stats-bar {
-    display: flex; gap: 1px;
-    background: var(--border);
-    border-bottom: 1px solid var(--border);
+  .add-btn:hover { opacity: .88; }
+  .nav-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 9px 16px; border-radius: 10px;
+    background: var(--page); border: 1px solid var(--border);
+    color: var(--text2); font-size: 13px; font-weight: 600; cursor: pointer;
+    font-family: var(--sf); transition: all .15s; white-space: nowrap;
   }
-  .stat-item {
-    flex: 1; padding: 14px 24px;
-    background: var(--bg);
-    display: flex; flex-direction: column; gap: 3px;
+  .nav-btn:hover { background: #e8e8e8; }
+  .nav-btn.active { background: var(--text); color: #fff; border-color: var(--text); }
+
+  /* ══ STATS ═══════════════════════════════════════════ */
+  .stats-row {
+    display: grid; grid-template-columns: repeat(4,1fr);
+    gap: 16px; padding: 20px 32px;
   }
-  .stat-val { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
-  .stat-label { font-size: 11px; color: var(--text2); font-weight: 400; text-transform: uppercase; letter-spacing: .06em; }
-  .stat-val.red { color: var(--red); }
-  .stat-val.green { color: var(--green); }
-  .stat-val.orange { color: var(--orange); }
-
-  /* ── MAIN ── */
-  .main { padding: 24px 32px; }
-
-  .section-header {
+  .stat-card {
+    background: var(--white); border-radius: 14px;
+    padding: 20px 22px; box-shadow: var(--shadow);
+    border: 1px solid var(--border);
     display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 18px;
   }
-  .section-title { font-size: 13px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .08em; }
-  .section-count { font-size: 12px; color: var(--text3); font-family: 'DM Mono', monospace; }
+  .stat-num {
+    font-size: 34px; font-weight: 800;
+    letter-spacing: -0.03em; line-height: 1;
+  }
+  .stat-num.red    { color: var(--red); }
+  .stat-num.green  { color: var(--green); }
+  .stat-num.grey   { color: #333; }
+  .stat-num.orange { color: #C86800; }
+  .stat-lbl {
+    font-size: 11px; font-weight: 500; color: var(--text3);
+    margin-top: 5px; text-transform: uppercase; letter-spacing: .04em;
+  }
+  .stat-icon {
+    width: 48px; height: 48px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0;
+  }
+  .stat-icon.grey-bg   { background: #F0F0F0; }
+  .stat-icon.green-bg  { background: rgba(76,175,26,.1); }
+  .stat-icon.red-bg    { background: rgba(204,30,18,.08); }
+  .stat-icon.orange-bg { background: rgba(200,104,0,.09); }
 
-  /* ── JOB GRID ── */
+  /* ══ STATS PAGE ══════════════════════════════════════ */
+  .stats-page { padding: 20px 32px 48px; }
+  .stats-snapshot-row {
+    display: grid; grid-template-columns: repeat(5,1fr);
+    gap: 16px; margin-bottom: 20px;
+  }
+  .snapshot-card {
+    background: var(--white); border-radius: 14px;
+    padding: 18px 20px; box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+  }
+  .snapshot-num { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; color: var(--text); }
+  .snapshot-num.red    { color: var(--red); }
+  .snapshot-num.green  { color: var(--green); }
+  .snapshot-num.orange { color: #C86800; }
+  .snapshot-lbl {
+    font-size: 11px; font-weight: 500; color: var(--text3);
+    margin-top: 7px; text-transform: uppercase; letter-spacing: .04em;
+  }
+  .snapshot-sub { font-size: 12px; color: var(--text2); margin-top: 3px; }
+
+  .stats-charts-row {
+    display: grid; grid-template-columns: 1.15fr 1.15fr 1fr;
+    gap: 16px; margin-bottom: 20px; align-items: stretch;
+  }
+  .chart-card {
+    background: var(--white); border-radius: 14px;
+    padding: 20px; box-shadow: var(--shadow); border: 1px solid var(--border);
+    display: flex; flex-direction: column;
+  }
+  .chart-card-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 14px; }
+  .chart-card-body { position: relative; height: 230px; }
+
+  .leaderboard-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .leaderboard-card {
+    background: var(--white); border-radius: 14px;
+    padding: 20px; box-shadow: var(--shadow); border: 1px solid var(--border);
+  }
+  .leaderboard-title-row {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+  }
+  .leaderboard-title { font-size: 14px; font-weight: 700; color: var(--text); }
+  .leaderboard-live { font-size: 11px; color: var(--text3); display: flex; align-items: center; gap: 5px; }
+  .leaderboard-live .live-dot { width: 6px; height: 6px; }
+  .leaderboard-empty { color: var(--text3); font-size: 13px; padding: 8px 0; }
+  .lb-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+  }
+  .lb-row:last-child { border-bottom: none; }
+  .lb-rank {
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: var(--text2); background: var(--page);
+  }
+  .lb-rank.gold   { background: #FFD700; color: #6B5400; }
+  .lb-rank.silver { background: #C7CCD1; color: #4A4F54; }
+  .lb-rank.bronze { background: #D8975A; color: #5A3A18; }
+  .lb-info { flex: 1; min-width: 0; }
+  .lb-name { font-size: 14px; font-weight: 600; color: var(--text); }
+  .lb-meta { font-size: 12px; color: var(--text3); margin-top: 2px; }
+  .lb-bar-track { height: 5px; border-radius: 3px; background: var(--page); margin-top: 6px; overflow: hidden; }
+  .lb-bar-fill { height: 100%; border-radius: 3px; background: var(--green); }
+
+  /* ══ MAIN ════════════════════════════════════════════ */
+  .main { padding: 0 32px 48px; }
+
+  .search-wrap { position: relative; margin-bottom: 14px; }
+  .search-input {
+    width: 100%; padding: 11px 16px 11px 44px;
+    background: var(--white); border: 1px solid var(--border);
+    border-radius: 12px; color: var(--text); font-size: 14px;
+    font-family: var(--sf); outline: none; transition: border-color .15s;
+    box-shadow: var(--shadow);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23aaa' stroke-width='2.5'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: 14px center;
+  }
+  .search-input:focus { border-color: var(--green); }
+  .search-input::placeholder { color: var(--text3); }
+
+  /* ══ FILTER TABS ═════════════════════════════════════ */
+  .filter-tabs-wrap {
+    display: flex; align-items: center;
+    justify-content: space-between; margin-bottom: 20px;
+  }
+  .filter-tabs { display: flex; gap: 4px; }
+  .filter-tab {
+    padding: 8px 18px; border-radius: 9px;
+    font-size: 14px; font-weight: 500;
+    border: none; background: transparent; color: var(--text2);
+    cursor: pointer; font-family: var(--sf); transition: all .15s;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .filter-tab:hover { background: var(--white); color: var(--text); }
+  .filter-tab.active {
+    background: var(--white); color: var(--text);
+    font-weight: 700; box-shadow: var(--shadow);
+  }
+  .tab-count {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 20px; height: 20px; padding: 0 5px;
+    border-radius: 10px; font-size: 11px; font-weight: 700;
+    background: #EEEEEE; color: var(--text2); transition: all .2s;
+  }
+  .filter-tab.active .tab-count { background: var(--red); color: #fff; }
+  .section-count { font-size: 13px; color: var(--text3); }
+
+  /* ══ GRID ════════════════════════════════════════════ */
   .job-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(300px,1fr));
     gap: 16px;
-    margin-bottom: 40px;
   }
 
-  /* ── JOB CARD ── */
+  /* ══ JOB CARD ════════════════════════════════════════ */
   .job-card {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 18px;
+    background: var(--white); border-radius: 16px;
+    border: 1px solid var(--border); box-shadow: var(--shadow);
     overflow: hidden;
-    cursor: pointer;
-    transition: transform .2s cubic-bezier(.4,0,.2,1), box-shadow .2s ease, border-color .2s;
-    animation: cardIn .4s ease forwards;
-    opacity: 0;
+    transition: transform .2s ease, box-shadow .2s ease;
+    animation: cardIn .32s ease forwards; opacity: 0;
   }
   @keyframes cardIn { to { opacity: 1; transform: translateY(0); } }
-  .job-card { transform: translateY(12px); }
-  .job-card:hover { transform: translateY(-3px); box-shadow: 0 16px 48px rgba(0,0,0,0.4); border-color: var(--border2); }
-  .job-card.delayed { border-color: rgba(255,69,58,0.3); }
-  .job-card.done { opacity: 0.5; }
+  .job-card { transform: translateY(8px); }
+  .job-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+  .job-card.delayed { border-color: rgba(204,30,18,.25); }
 
-  /* car image area */
-  .card-img {
-    width: 100%; height: 160px;
-    object-fit: cover;
-    display: block;
-    background: var(--bg3);
-    position: relative;
+  .card-header {
+    padding: 16px 16px 12px;
+    display: flex; align-items: flex-start; gap: 12px;
   }
-  .card-img-wrap { position: relative; height: 160px; overflow: hidden; background: var(--bg3); }
-  .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .3s ease; }
-  .job-card:hover .card-img-wrap img { transform: scale(1.04); }
-  .card-img-placeholder {
-    width: 100%; height: 100%;
+  .card-icon-wrap {
+    width: 44px; height: 44px; border-radius: 12px;
+    background: rgba(204,30,18,.09); color: var(--red);
     display: flex; align-items: center; justify-content: center;
-    font-size: 48px; color: var(--text3);
+    font-size: 22px; flex-shrink: 0;
   }
-  .card-img-gradient {
-    width: 100%; height: 100%;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  .card-title-area { flex: 1; min-width: 0; }
+  .card-car {
+    font-size: 15px; font-weight: 700; color: var(--text);
+    letter-spacing: -0.01em; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
   }
-  .card-img-car-icon { font-size: 42px; opacity: 0.45; }
-  .card-img-car-name { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.35); letter-spacing: .06em; }
-  .card-img-overlay {
-    position: absolute; inset: 0;
-    background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.7) 100%);
+  .card-plate {
+    font-size: 12px; color: var(--text3); margin-top: 2px;
+    font-family: 'Courier New', monospace; font-weight: 600; letter-spacing: .04em;
+  }
+  .carryover-badge {
+    display: inline-block; margin-top: 5px;
+    font-size: 10px; font-weight: 700; padding: 2px 8px;
+    border-radius: 8px; letter-spacing: .03em;
+    background: rgba(200,104,0,.12); color: #C86800;
   }
   .card-stage-badge {
-    position: absolute; top: 12px; right: 12px;
-    padding: 4px 10px; border-radius: 20px;
-    font-size: 11px; font-weight: 600;
-    backdrop-filter: blur(8px);
+    font-size: 11px; font-weight: 600; padding: 4px 10px;
+    border-radius: 20px; white-space: nowrap; flex-shrink: 0; margin-top: 2px;
   }
-  .card-timer {
-    position: absolute; bottom: 10px; left: 12px;
-    font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500;
-    color: rgba(255,255,255,0.9);
-    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
-  }
-  .card-job-num {
-    position: absolute; bottom: 10px; right: 12px;
-    font-family: 'DM Mono', monospace; font-size: 11px;
-    color: rgba(255,255,255,0.5);
+  .stage-created    { background: #F0F0F0;             color: #555; }
+  .stage-assigned   { background: #FFF3E0;             color: #B86800; }
+  .stage-inprogress { background: rgba(76,175,26,.12); color: #2A7008; }
+  .stage-inspection { background: rgba(76,175,26,.1);  color: #2A7008; }
+  .stage-washing    { background: rgba(76,175,26,.12); color: #2A7008; }
+  .stage-done       { background: rgba(76,175,26,.1);  color: #2A7008; }
+  .stage-delayed    { background: rgba(204,30,18,.08); color: var(--red); }
+
+  .card-rows { padding: 0 16px 12px; display: flex; flex-direction: column; gap: 7px; }
+  .card-row { display: flex; align-items: center; gap: 8px; }
+  .row-icon { width: 18px; text-align: center; font-size: 13px; flex-shrink: 0; }
+  .row-label { font-size: 12px; color: var(--text3); width: 64px; flex-shrink: 0; }
+  .row-val {
+    font-size: 13px; font-weight: 500; color: var(--text);
+    flex: 1; min-width: 0; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap;
   }
 
-  /* card body */
-  .card-body { padding: 14px 16px 16px; }
-  .card-car { font-size: 16px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 2px; }
-  .card-plate {
-    font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text2);
-    margin-bottom: 12px;
-  }
-
-  .card-info { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
-  .card-row { display: flex; align-items: center; justify-content: space-between; }
-  .card-row-label { font-size: 12px; color: var(--text2); }
-  .card-row-val { font-size: 12px; font-weight: 500; color: var(--text); }
-
-  /* stage progress bar */
-  .stage-track {
-    display: flex; gap: 3px; margin-top: 4px;
-  }
-  .stage-seg {
-    flex: 1; height: 3px; border-radius: 2px; background: var(--bg4);
-    transition: background .3s;
-  }
-  .stage-seg.done { background: var(--green); }
-  .stage-seg.active { background: var(--blue); }
+  .card-progress { padding: 0 16px 14px; }
+  .stage-track { display: flex; gap: 3px; }
+  .stage-seg { flex: 1; height: 3px; border-radius: 2px; background: #EBEBEB; transition: background .3s; }
+  .stage-seg.done    { background: var(--green); }
+  .stage-seg.active  { background: var(--green); }
   .stage-seg.delayed { background: var(--red); }
 
-  /* action buttons */
-  .card-actions { display: flex; gap: 8px; margin-top: 14px; }
-  .card-action-btn {
-    flex: 1; padding: 8px; border-radius: 10px;
-    border: 1px solid var(--border2); background: var(--bg3);
-    color: var(--text); font-size: 12px; font-weight: 500;
-    cursor: pointer; font-family: var(--sf); transition: all .15s;
+  .card-assign-wrap { padding: 0 16px 14px; }
+  .card-assign-btn {
+    width: 100%; padding: 9px; border-radius: 9px;
+    background: rgba(204,30,18,.07); border: 1px solid rgba(204,30,18,.2);
+    color: var(--red); font-size: 12px; font-weight: 600;
+    cursor: pointer; font-family: var(--sf); transition: background .15s;
   }
-  .card-action-btn:hover { background: var(--bg4); }
-  .card-action-btn.primary { background: var(--blue); border-color: transparent; }
-  .card-action-btn.primary:hover { opacity: .85; }
-  .card-action-btn.danger { border-color: rgba(255,69,58,.3); color: var(--red); }
+  .card-assign-btn:hover { background: rgba(204,30,18,.13); }
 
-  /* stage badge colors */
-  .stage-created { background: rgba(142,142,147,.15); color: #8e8e93; }
-  .stage-assigned { background: rgba(255,159,10,.15); color: var(--orange); }
-  .stage-inprogress { background: rgba(10,132,255,.15); color: var(--blue); }
-  .stage-inspection { background: rgba(191,90,242,.15); color: var(--purple); }
-  .stage-washing { background: rgba(48,209,88,.15); color: var(--green); }
-  .stage-done { background: rgba(48,209,88,.1); color: var(--green); }
-  .stage-delayed { background: rgba(255,69,58,.15); color: var(--red); }
+  .card-footer {
+    padding: 12px 16px; border-top: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-stage-select {
+    flex: 1; padding: 8px 26px 8px 10px; border-radius: 9px;
+    background: var(--page); border: 1px solid var(--border);
+    color: var(--text); font-size: 12px; font-weight: 500; font-family: var(--sf);
+    cursor: pointer; outline: none;
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 8px center;
+  }
+  .card-stage-select:focus { border-color: var(--green); outline: none; }
+  .card-stage-select option { background: #fff; color: var(--text); }
+  .card-logs-btn {
+    padding: 8px 12px; border-radius: 9px;
+    background: var(--page); border: 1px solid var(--border);
+    color: var(--text2); font-size: 12px; font-weight: 500;
+    cursor: pointer; font-family: var(--sf); transition: all .15s; white-space: nowrap;
+  }
+  .card-logs-btn:hover { background: #e8e8e8; }
+  .card-delete-btn {
+    width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
+    background: rgba(204,30,18,.07); border: 1px solid rgba(204,30,18,.18);
+    color: var(--red); font-size: 15px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: all .15s;
+  }
+  .card-delete-btn:hover { background: rgba(204,30,18,.15); }
 
-  /* ── EMPTY STATE ── */
+  /* ══ EMPTY STATE ═════════════════════════════════════ */
   .empty-state {
-    grid-column: 1/-1;
-    text-align: center; padding: 80px 20px;
-    color: var(--text3);
+    grid-column: 1/-1; text-align: center; padding: 80px 20px; color: var(--text3);
   }
   .empty-icon { font-size: 48px; margin-bottom: 16px; }
   .empty-title { font-size: 18px; font-weight: 600; color: var(--text2); margin-bottom: 8px; }
   .empty-sub { font-size: 14px; }
 
-  /* ── MODAL ── */
+  /* ══ MODAL ═══════════════════════════════════════════ */
   .modal-overlay {
     position: fixed; inset: 0; z-index: 200;
-    background: rgba(0,0,0,.7); backdrop-filter: blur(12px);
+    background: rgba(0,0,0,.3); backdrop-filter: blur(6px);
     display: flex; align-items: center; justify-content: center;
     opacity: 0; pointer-events: none; transition: opacity .2s;
   }
   .modal-overlay.open { opacity: 1; pointer-events: all; }
   .modal {
-    background: var(--bg2); border: 1px solid var(--border2);
-    border-radius: 22px; padding: 28px;
+    background: var(--white); border: 1px solid var(--border);
+    border-radius: 20px; padding: 28px;
     width: 480px; max-width: calc(100vw - 32px);
-    max-height: 85vh; overflow-y: auto;
-    transform: scale(.95) translateY(10px);
+    max-height: 90vh; overflow-y: auto;
+    transform: scale(.96) translateY(8px);
     transition: transform .22s cubic-bezier(.4,0,.2,1);
+    box-shadow: 0 20px 60px rgba(0,0,0,.12);
   }
   .modal-overlay.open .modal { transform: scale(1) translateY(0); }
-  .modal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
-  .modal-title { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+  .modal-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 20px;
+  }
+  .modal-title { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; color: var(--text); }
   .modal-close {
     width: 28px; height: 28px; border-radius: 50%;
-    background: var(--bg4); border: none; color: var(--text2);
-    font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-    transition: background .15s;
+    background: var(--page); border: none; color: var(--text2);
+    font-size: 14px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: background .15s;
   }
-  .modal-close:hover { background: var(--bg3); }
+  .modal-close:hover { background: #e0e0e0; }
 
   .form-group { margin-bottom: 16px; }
-  .form-label { font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; display: block; }
+  .form-label {
+    font-size: 11px; font-weight: 600; color: var(--text2);
+    text-transform: uppercase; letter-spacing: .07em;
+    margin-bottom: 6px; display: block;
+  }
   .form-input {
     width: 100%; padding: 10px 14px;
-    background: var(--bg3); border: 1px solid var(--border2);
+    background: var(--page); border: 1px solid var(--border);
     border-radius: 10px; color: var(--text); font-size: 14px;
     font-family: var(--sf); outline: none; transition: border-color .15s;
   }
-  .form-input:focus { border-color: var(--blue); }
+  .form-input:focus { border-color: var(--green); background: #fff; }
   .form-input::placeholder { color: var(--text3); }
   .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .form-submit {
     width: 100%; padding: 12px; border-radius: 12px;
-    background: var(--blue); border: none; color: #fff;
+    background: var(--red); border: none; color: #fff;
     font-size: 15px; font-weight: 600; cursor: pointer;
     font-family: var(--sf); margin-top: 8px; transition: opacity .15s;
   }
-  .form-submit:hover { opacity: .85; }
+  .form-submit:hover { opacity: .88; }
+  select.form-input {
+    appearance: none; -webkit-appearance: none; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center;
+    background-color: var(--page);
+  }
+  select.form-input option { background: #fff; color: var(--text); }
 
-  /* assign modal */
   .mechanic-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
   .mechanic-btn {
     padding: 12px 16px; border-radius: 12px;
-    background: var(--bg3); border: 1px solid var(--border);
+    background: var(--page); border: 1px solid var(--border);
     color: var(--text); font-size: 14px; font-weight: 500;
     cursor: pointer; text-align: left; font-family: var(--sf);
     transition: all .15s; display: flex; align-items: center; gap: 10px;
   }
-  .mechanic-btn:hover { background: var(--bg4); border-color: var(--border2); }
-  .mechanic-av { width: 32px; height: 32px; border-radius: 50%; background: var(--blue); display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+  .mechanic-btn:hover { background: #e8e8e8; border-color: #ccc; }
+  .mechanic-av {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: rgba(204,30,18,.1); color: var(--red);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; flex-shrink: 0;
+  }
 
-  /* log timeline */
   .log-item { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
   .log-item:last-child { border-bottom: none; }
-  .log-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--blue); margin-top: 5px; flex-shrink: 0; }
+  .log-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); margin-top: 6px; flex-shrink: 0; }
   .log-stage { font-size: 13px; font-weight: 600; color: var(--text); }
   .log-person { font-size: 12px; color: var(--text2); }
-  .log-time { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; margin-top: 2px; }
+  .log-time { font-size: 11px; color: var(--text3); font-family: 'Courier New', monospace; margin-top: 2px; }
 
-  /* ── SETTINGS PANEL ── */
-  .gear-btn {
-    width: 32px; height: 32px; border-radius: 9px;
-    background: var(--bg3); border: 1px solid var(--border);
-    color: var(--text2); font-size: 15px; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    transition: all .15s; flex-shrink: 0;
-  }
-  .gear-btn:hover { background: var(--bg4); color: var(--text); }
-
+  /* ══ SETTINGS ════════════════════════════════════════ */
   .settings-overlay {
     position: fixed; inset: 0; z-index: 300;
-    background: rgba(0,0,0,.55); backdrop-filter: blur(8px);
+    background: rgba(0,0,0,.22); backdrop-filter: blur(4px);
     opacity: 0; pointer-events: none; transition: opacity .2s;
   }
   .settings-overlay.open { opacity: 1; pointer-events: all; }
   .settings-panel {
     position: absolute; top: 0; right: 0; bottom: 0;
     width: 380px; max-width: 100vw;
-    background: var(--bg2); border-left: 1px solid var(--border2);
+    background: var(--white); border-left: 1px solid var(--border);
     transform: translateX(100%);
     transition: transform .25s cubic-bezier(.4,0,.2,1);
     display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: -4px 0 24px rgba(0,0,0,.07);
   }
   .settings-overlay.open .settings-panel { transform: translateX(0); }
   .settings-hdr {
-    padding: 20px 20px 16px;
-    border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: space-between;
-    flex-shrink: 0;
+    padding: 20px 20px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
   }
-  .settings-title { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
+  .settings-title { font-size: 18px; font-weight: 700; color: var(--text); }
   .settings-body { flex: 1; overflow-y: auto; padding: 20px; }
   .settings-sec { margin-bottom: 28px; }
   .settings-sec-hdr {
-    font-size: 11px; font-weight: 600; color: var(--text2);
+    font-size: 11px; font-weight: 600; color: var(--text3);
     text-transform: uppercase; letter-spacing: .08em; margin-bottom: 12px;
   }
   .mechanic-row {
     display: flex; align-items: center; gap: 10px;
     padding: 10px 12px; border-radius: 12px;
-    background: var(--bg3); border: 1px solid var(--border); margin-bottom: 6px;
+    background: var(--page); border: 1px solid var(--border); margin-bottom: 6px;
   }
   .mechanic-row-info { flex: 1; min-width: 0; }
-  .mechanic-row-name { font-size: 14px; font-weight: 500; }
+  .mechanic-row-name { font-size: 14px; font-weight: 500; color: var(--text); }
   .mechanic-row-spec { font-size: 12px; color: var(--text2); margin-top: 2px; }
   .mechanic-del-btn {
     padding: 5px 10px; border-radius: 7px; flex-shrink: 0;
-    background: rgba(255,69,58,.1); border: 1px solid rgba(255,69,58,.25);
+    background: rgba(204,30,18,.07); border: 1px solid rgba(204,30,18,.18);
     color: var(--red); font-size: 12px; cursor: pointer;
     font-family: var(--sf); transition: all .15s;
   }
-  .mechanic-del-btn:hover { background: rgba(255,69,58,.2); }
+  .mechanic-del-btn:hover { background: rgba(204,30,18,.14); }
   .settings-add-form { margin-top: 16px; }
   .worker-role-badge {
     font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px;
-    background: rgba(10,132,255,.15); color: var(--blue);
-    border: 1px solid rgba(10,132,255,.25); margin-top: 3px; display: inline-block;
+    background: rgba(76,175,26,.1); color: #2A7008;
+    border: 1px solid rgba(76,175,26,.2); margin-top: 3px; display: inline-block;
   }
-  .mechanic-av { font-size: 18px; }
-
-  /* ── SEARCH ── */
-  .search-wrap { position: relative; margin-bottom: 18px; }
-  .search-input {
-    width: 100%; padding: 10px 14px 10px 40px;
-    background: var(--bg2); border: 1px solid var(--border);
-    border-radius: 12px; color: var(--text); font-size: 14px;
-    font-family: var(--sf); outline: none; transition: border-color .15s;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2348484a' stroke-width='2.5'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: 13px center;
-  }
-  .search-input:focus { border-color: var(--border2); }
-  .search-input::placeholder { color: var(--text3); }
-  .search-input::-webkit-search-cancel-button { cursor: pointer; }
-
-  /* ── DELAY SELECT ── */
-  select.form-input {
-    appearance: none; -webkit-appearance: none; cursor: pointer;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238e8e93' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: right 12px center;
-  }
-  select.form-input option { background: var(--bg3); color: var(--text); }
 </style>
 </head>
 <body>
 
-<!-- TOPBAR -->
+<!-- ══ TOPBAR ══════════════════════════════════════════ -->
 <div class="topbar">
   <div class="topbar-left">
     <img class="topbar-logo" src="/logo.png" alt="Pagariya Auto" onerror="this.style.display='none'">
-    <div class="topbar-divider"></div>
-    <span class="topbar-title">Workshop Dashboard</span>
   </div>
   <div class="topbar-center">
-    <button class="tab-btn active" data-tab="active" onclick="setTab('active',this)">Active Jobs</button>
-    <button class="tab-btn" data-tab="completed" onclick="setTab('completed',this)">Completed</button>
+    <div class="topbar-brand">PAGARIYA AUTO WORKSHOP</div>
+    <div class="topbar-tagline">A New Era in Trusted Service</div>
+    <div class="topbar-date" id="topbar-date"></div>
   </div>
   <div class="topbar-right">
-    <div class="live-dot"></div>
-    <span class="live-label">Live</span>
+    <div class="live-wrap">
+      <div class="live-dot"></div>
+      <span class="live-label">Live</span>
+    </div>
+    <button class="nav-btn" id="navStatsBtn" onclick="toggleStatsView()" title="Stats">📊 Stats</button>
     <button class="gear-btn" onclick="openSettings()" title="Settings">⚙</button>
-    <button class="add-btn" onclick="openAddModal()">
-      <span>+</span> New Job
-    </button>
+    <button class="add-btn" onclick="openAddModal()">+ New Job</button>
   </div>
 </div>
 
-<!-- STATS BAR -->
-<div class="stats-bar">
-  <div class="stat-item">
-    <div class="stat-val" id="stat-active">0</div>
-    <div class="stat-label">Active Jobs</div>
+<!-- ══ STATS ═══════════════════════════════════════════ -->
+<div class="stats-row">
+  <div class="stat-card">
+    <div>
+      <div class="stat-num grey" id="stat-active">0</div>
+      <div class="stat-lbl">Active Jobs</div>
+    </div>
+    <div class="stat-icon grey-bg">🚗</div>
   </div>
-  <div class="stat-item">
-    <div class="stat-val green" id="stat-done">0</div>
-    <div class="stat-label">Completed Today</div>
+  <div class="stat-card">
+    <div>
+      <div class="stat-num green" id="stat-done">0</div>
+      <div class="stat-lbl">Completed Today</div>
+    </div>
+    <div class="stat-icon green-bg">✅</div>
   </div>
-  <div class="stat-item">
-    <div class="stat-val red" id="stat-delayed">0</div>
-    <div class="stat-label">Delayed</div>
+  <div class="stat-card">
+    <div>
+      <div class="stat-num red" id="stat-delayed">0</div>
+      <div class="stat-lbl">Delayed Jobs</div>
+    </div>
+    <div class="stat-icon red-bg">⚠️</div>
   </div>
-  <div class="stat-item">
-    <div class="stat-val orange" id="stat-avgtime">—</div>
-    <div class="stat-label">Avg. Time Today</div>
+  <div class="stat-card">
+    <div>
+      <div class="stat-num orange" id="stat-avgtime">—</div>
+      <div class="stat-lbl">Avg Time Today</div>
+    </div>
+    <div class="stat-icon orange-bg">⏱</div>
   </div>
 </div>
 
-<!-- MAIN -->
+<!-- ══ MAIN ════════════════════════════════════════════ -->
 <div class="main">
   <div class="search-wrap">
     <input class="search-input" id="searchInput" type="search"
       placeholder="Search by job #, car model, plate or mechanic…"
       oninput="applySearch(this.value)">
   </div>
-  <div class="section-header">
-    <span class="section-title" id="section-title">Active Jobs</span>
+  <div class="filter-tabs-wrap">
+    <div class="filter-tabs" id="filterTabs">
+      <button class="filter-tab active" data-filter="active"
+        onclick="setStageFilter('active',this)">Active <span class="tab-count" id="count-active">0</span></button>
+      <button class="filter-tab" data-filter="delayed"
+        onclick="setStageFilter('delayed',this)">Delayed <span class="tab-count" id="count-delayed">0</span></button>
+      <button class="filter-tab" data-filter="done"
+        onclick="setStageFilter('done',this)">Completed</button>
+    </div>
     <span class="section-count" id="section-count">0 jobs</span>
   </div>
   <div class="job-grid" id="jobGrid"></div>
 </div>
 
-<!-- ADD JOB MODAL -->
+<!-- ══ STATS PAGE ═══════════════════════════════════════ -->
+<div class="stats-page" id="statsPage" style="display:none">
+  <div class="stats-snapshot-row">
+    <div class="snapshot-card">
+      <div class="snapshot-num green" id="snap-completed-today">—</div>
+      <div class="snapshot-lbl">Completed Today</div>
+    </div>
+    <div class="snapshot-card">
+      <div class="snapshot-num orange" id="snap-avg-today">—</div>
+      <div class="snapshot-lbl">Avg Time / Job Today</div>
+    </div>
+    <div class="snapshot-card">
+      <div class="snapshot-num grey" id="snap-fastest-today">—</div>
+      <div class="snapshot-lbl">Fastest Job Today</div>
+    </div>
+    <div class="snapshot-card">
+      <div class="snapshot-num grey" id="snap-week-total">—</div>
+      <div class="snapshot-lbl">Total Jobs This Week</div>
+    </div>
+    <div class="snapshot-card">
+      <div class="snapshot-num" id="snap-week-change">—</div>
+      <div class="snapshot-lbl">Vs Last Week</div>
+      <div class="snapshot-sub" id="snap-week-change-sub"></div>
+    </div>
+  </div>
+
+  <div class="stats-charts-row">
+    <div class="chart-card">
+      <div class="chart-card-title">Jobs Completed — Last 7 Days</div>
+      <div class="chart-card-body"><canvas id="chartDaily"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-title">Average Job Time — Last 7 Days</div>
+      <div class="chart-card-body"><canvas id="chartAvgTime"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-title">Delay Reasons</div>
+      <div class="chart-card-body"><canvas id="chartDelays"></canvas></div>
+    </div>
+  </div>
+
+  <div class="leaderboard-row">
+    <div class="leaderboard-card">
+      <div class="leaderboard-title-row">
+        <span class="leaderboard-title">🏆 Top Job Card Creators</span>
+        <span class="leaderboard-live"><span class="live-dot"></span> Updates every 30s</span>
+      </div>
+      <div id="creatorsLeaderboard"></div>
+    </div>
+    <div class="leaderboard-card">
+      <div class="leaderboard-title-row">
+        <span class="leaderboard-title">🔧 Top Mechanics</span>
+        <span class="leaderboard-live"><span class="live-dot"></span> Updates every 30s</span>
+      </div>
+      <div id="mechanicsLeaderboard"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADD JOB MODAL ══════════════════════════════════ -->
 <div class="modal-overlay" id="addModal" onclick="closeModalOutside(event,'addModal')">
   <div class="modal">
     <div class="modal-header">
@@ -477,7 +665,7 @@
   </div>
 </div>
 
-<!-- ASSIGN MODAL -->
+<!-- ══ ASSIGN MODAL ═══════════════════════════════════ -->
 <div class="modal-overlay" id="assignModal" onclick="closeModalOutside(event,'assignModal')">
   <div class="modal">
     <div class="modal-header">
@@ -485,12 +673,12 @@
       <button class="modal-close" onclick="closeModal('assignModal')">✕</button>
     </div>
     <div class="mechanic-list" id="mechanicList"></div>
-    <input class="form-input" id="customMechanic" placeholder="Or type mechanic name..." style="margin-bottom:12px;">
+    <input class="form-input" id="customMechanic" placeholder="Or type mechanic name…" style="margin-bottom:12px;">
     <button class="form-submit" onclick="assignCustom()">Assign</button>
   </div>
 </div>
 
-<!-- LOGS MODAL -->
+<!-- ══ LOGS MODAL ══════════════════════════════════════ -->
 <div class="modal-overlay" id="logsModal" onclick="closeModalOutside(event,'logsModal')">
   <div class="modal">
     <div class="modal-header">
@@ -501,7 +689,7 @@
   </div>
 </div>
 
-<!-- DELAY MODAL -->
+<!-- ══ DELAY MODAL ═════════════════════════════════════ -->
 <div class="modal-overlay" id="delayModal" onclick="closeModalOutside(event,'delayModal')">
   <div class="modal">
     <div class="modal-header">
@@ -527,7 +715,7 @@
   </div>
 </div>
 
-<!-- SETTINGS PANEL -->
+<!-- ══ SETTINGS PANEL ══════════════════════════════════ -->
 <div class="settings-overlay" id="settingsOverlay" onclick="closeSettingsOutside(event)">
   <div class="settings-panel">
     <div class="settings-hdr">
@@ -552,7 +740,6 @@
           <button class="form-submit" onclick="addMechanic()">Add Mechanic</button>
         </div>
       </div>
-
       <div class="settings-sec">
         <div class="settings-sec-hdr">Workers</div>
         <div id="workersMgmtList"></div>
@@ -586,50 +773,64 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script>
 const STAGES = ['created','assigned','inprogress','inspection','washing','done'];
 const STAGE_LABELS = {
   created: 'Created', assigned: 'Assigned', inprogress: 'In Progress',
   inspection: 'Inspection', washing: 'Washing', done: 'Done', delayed: 'Delayed'
 };
-let currentTab = 'active';
+const ROLE_LABELS = {
+  jobcard_creator: 'Jobcard Creator', supervisor: 'Supervisor',
+  mechanic: 'Mechanic', inspector: 'Inspector', washer: 'Washer',
+  all: 'All Roles (Admin/Tester)'
+};
+
+let stageFilter = 'active';
 let assigningJobId = null;
-let delayingJobId = null;
+let delayingJobId  = null;
 let jobs = [];
 let lastJobsSignature = null;
 let searchQuery = '';
 
-// ── CAR GRADIENT ───────────────────────────────
-function modelGradient(model) {
-  const palettes = [
-    ['#0d1b2a','#1b263b','#415a77'],
-    ['#1a0a2e','#2d1b69','#5c4b8a'],
-    ['#0a1628','#1c3a5e','#2e6b9e'],
-    ['#1a0a00','#3d1a02','#7b3f00'],
-    ['#0a1a0a','#1a3a1a','#2d5a2d'],
-    ['#1a1a0a','#3a3a1a','#5a5a00'],
-    ['#1a0a1a','#3a1a3a','#5a2d5a'],
-    ['#0a1a1a','#1a3a3a','#2d5a5a'],
-  ];
-  let h = 0;
-  for (let i = 0; i < model.length; i++) h = (h * 31 + model.charCodeAt(i)) >>> 0;
-  const [c1, c2, c3] = palettes[h % palettes.length];
-  return `linear-gradient(135deg, ${c1} 0%, ${c2} 50%, ${c3} 100%)`;
+// ── Date utils ───────────────────────────────────────────
+// SQLite's CURRENT_TIMESTAMP yields "YYYY-MM-DD HH:MM:SS" in UTC with no
+// timezone marker; browsers parse that as local time, which silently shifts
+// every stored timestamp by the local UTC offset. Normalize to ISO-UTC first.
+function parseDbDate(dateStr) {
+  return new Date(dateStr.replace(' ', 'T') + 'Z');
+}
+function hoursSince(dateStr) {
+  return (Date.now() - parseDbDate(dateStr).getTime()) / 3600000;
+}
+function isToday(dateStr) {
+  return parseDbDate(dateStr).toDateString() === new Date().toDateString();
 }
 
-// ── TIMER ──────────────────────────────────────
+// ── Timer utils ──────────────────────────────────────────
 function timeSince(dateStr) {
-  const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
-  if (diff < 60) return diff + 's';
-  if (diff < 3600) return Math.floor(diff/60) + 'm';
-  const h = Math.floor(diff/3600), m = Math.floor((diff%3600)/60);
-  return h + 'h ' + (m>0?m+'m':'');
+  const diff = Math.floor((Date.now() - parseDbDate(dateStr)) / 1000);
+  if (diff < 60)   return diff + 's';
+  if (diff < 3600) return Math.floor(diff / 60) + 'm';
+  const h = Math.floor(diff / 3600), m = Math.floor((diff % 3600) / 60);
+  return h + 'h ' + (m > 0 ? m + 'm' : '');
 }
 
-// ── STAGE PROGRESS ─────────────────────────────
+// ── Job classification helpers ───────────────────────────
+function isStuckInStage(job) {
+  return job.current_stage !== 'done' && hoursSince(job.updated_at) > 2;
+}
+function isDelayedJob(job) {
+  return job.current_stage === 'delayed' || isStuckInStage(job);
+}
+function isCarryOver(job) {
+  return job.current_stage !== 'done' && !isToday(job.created_at);
+}
+
+// ── Stage progress bar ───────────────────────────────────
 function stageIndex(stage) {
-  const idx = STAGES.indexOf(stage);
-  return idx === -1 ? 0 : idx;
+  const i = STAGES.indexOf(stage);
+  return i === -1 ? 0 : i;
 }
 
 function buildStageTrack(stage) {
@@ -639,210 +840,259 @@ function buildStageTrack(stage) {
   const idx = stageIndex(stage);
   return STAGES.map((s, i) => {
     let cls = 'stage-seg';
-    if (i < idx) cls += ' done';
+    if (i < idx)        cls += ' done';
     else if (i === idx) cls += stage === 'done' ? ' done' : ' active';
     return `<div class="${cls}"></div>`;
   }).join('');
 }
 
-// ── RENDER CARD ────────────────────────────────
+// ── Render one card ──────────────────────────────────────
 function renderCard(job) {
   const card = document.createElement('div');
-  card.className = 'job-card' + (job.current_stage === 'delayed' ? ' delayed' : '') + (job.current_stage === 'done' ? ' done' : '');
-  card.style.animationDelay = Math.random() * 0.15 + 's';
+  card.className = 'job-card' + (job.current_stage === 'delayed' ? ' delayed' : '');
+  card.dataset.jobId = job.id;
+  card.style.animationDelay = (Math.random() * 0.12).toFixed(2) + 's';
 
-  const gradient = modelGradient(job.car_model || 'Car');
-  const imgHtml = `<div class="card-img-gradient" style="background:${gradient}">
-    <span class="card-img-car-icon">🚗</span>
-    <span class="card-img-car-name">${(job.car_model || 'Unknown').toUpperCase()}</span>
-  </div>`;
-
-  const stageClass = 'stage-' + (job.current_stage || 'created').replace(' ','');
+  const stageClass = 'stage-' + (job.current_stage || 'created');
   const stageLabel = STAGE_LABELS[job.current_stage] || job.current_stage;
 
-  const isActive = job.current_stage !== 'done';
-  const nextStageLabel = getNextStageLabel(job.current_stage);
+  const stageOptions = [...STAGES, 'delayed'].map(s =>
+    `<option value="${s}"${job.current_stage === s ? ' selected' : ''}>${STAGE_LABELS[s]}</option>`
+  ).join('');
 
   card.innerHTML = `
-    <div class="card-img-wrap">
-      ${imgHtml}
-      <div class="card-img-overlay"></div>
+    <div class="card-header">
+      <div class="card-icon-wrap">🚗</div>
+      <div class="card-title-area">
+        <div class="card-car">${job.car_model || 'Unknown Car'}</div>
+        <div class="card-plate">${job.car_number}</div>
+        ${isCarryOver(job) ? '<span class="carryover-badge">↻ Carried over</span>' : ''}
+      </div>
       <span class="card-stage-badge ${stageClass}">${stageLabel}</span>
-      ${isActive ? `<span class="card-timer" data-start="${job.created_at}">⏱ ${timeSince(job.created_at)}</span>` : '<span class="card-timer">✓ Done</span>'}
-      <span class="card-job-num">${job.job_number}</span>
     </div>
-    <div class="card-body">
-      <div class="card-car">${job.car_model || 'Unknown Car'}</div>
-      <div class="card-plate">${job.car_number}</div>
-      <div class="card-info">
-        <div class="card-row">
-          <span class="card-row-label">Work</span>
-          <span class="card-row-val">${job.work_type || '—'}</span>
-        </div>
-        <div class="card-row">
-          <span class="card-row-label">Mechanic</span>
-          <span class="card-row-val">${job.assigned_mechanic || 'Not assigned'}</span>
-        </div>
-        <div class="card-row">
-          <span class="card-row-label">Customer</span>
-          <span class="card-row-val">${job.customer_name || '—'}</span>
-        </div>
+    <div class="card-rows">
+      <div class="card-row">
+        <span class="row-icon">🔧</span>
+        <span class="row-label">Work</span>
+        <span class="row-val">${job.work_type || '—'}</span>
       </div>
+      <div class="card-row">
+        <span class="row-icon">👨‍🔧</span>
+        <span class="row-label">Mechanic</span>
+        <span class="row-val">${job.assigned_mechanic || '<span style="color:#bbb;font-style:italic">Unassigned</span>'}</span>
+      </div>
+      <div class="card-row">
+        <span class="row-icon">👤</span>
+        <span class="row-label">Customer</span>
+        <span class="row-val">${job.customer_name || '—'}</span>
+      </div>
+      <div class="card-row">
+        <span class="row-icon">📱</span>
+        <span class="row-label">Phone</span>
+        <span class="row-val">${job.customer_phone || '—'}</span>
+      </div>
+      <div class="card-row">
+        <span class="row-icon">⏱</span>
+        <span class="row-label">Time</span>
+        <span class="row-val card-elapsed" data-start="${job.created_at}">${timeSince(job.created_at)}</span>
+      </div>
+    </div>
+    <div class="card-progress">
       <div class="stage-track">${buildStageTrack(job.current_stage)}</div>
-      <div class="card-actions">
-        ${job.current_stage === 'created' ? `<button class="card-action-btn primary" onclick="openAssign(${job.id},'${job.car_model}')">Assign Mechanic</button>` : ''}
-        ${job.current_stage === 'assigned' ? `<button class="card-action-btn primary" onclick="advanceStage(${job.id},'inprogress')">Mark Started</button>` : ''}
-        ${job.current_stage === 'inprogress' ? `<button class="card-action-btn primary" onclick="advanceStage(${job.id},'inspection')">Send to Inspection</button>` : ''}
-        ${job.current_stage === 'inspection' ? `<button class="card-action-btn primary" onclick="advanceStage(${job.id},'washing')">Pass — Send to Wash</button>` : ''}
-        ${job.current_stage === 'washing' ? `<button class="card-action-btn primary" onclick="advanceStage(${job.id},'done')">Mark Done</button>` : ''}
-        ${isActive && job.current_stage !== 'created' ? `<button class="card-action-btn danger" onclick="markDelayed(${job.id})">⚠ Delay</button>` : ''}
-        <button class="card-action-btn" onclick="viewLogs(${job.id},'${job.car_model} ${job.car_number}')">Logs</button>
-      </div>
+    </div>
+    ${job.current_stage === 'created' ? `
+    <div class="card-assign-wrap">
+      <button class="card-assign-btn" onclick="openAssign(${job.id},${JSON.stringify(job.car_model||'')})">+ Assign Mechanic</button>
+    </div>` : ''}
+    <div class="card-footer">
+      <select class="card-stage-select" onchange="changeStage(${job.id},this.value,this)">${stageOptions}</select>
+      <button class="card-logs-btn" onclick="viewLogs(${job.id},${JSON.stringify((job.car_model||'') + ' ' + job.car_number)})">Logs</button>
+      <button class="card-delete-btn" onclick="deleteJob(${job.id})" title="Delete">🗑</button>
     </div>`;
 
   return card;
 }
 
-function getNextStageLabel(stage) {
-  const map = { created:'Assign', assigned:'Start', inprogress:'Inspection', inspection:'Wash', washing:'Done' };
-  return map[stage] || '';
-}
-
-// ── LOAD JOBS ──────────────────────────────────
+// ── Load & render ────────────────────────────────────────
 async function loadJobs() {
   try {
     const res = await fetch('/api/jobs');
     jobs = await res.json();
     updateStats();
+    const sig = signatureOf(getVisibleJobs());
+    if (sig !== lastJobsSignature) renderJobs();
+  } catch (e) { console.error(e); }
+}
 
-    const filtered = currentTab === 'active'
-      ? jobs.filter(j => j.current_stage !== 'done')
-      : jobs.filter(j => j.current_stage === 'done');
-    const sig = filtered.map(j => `${j.id}:${j.current_stage}:${j.assigned_mechanic||''}`).join('|');
+// Active   → every open job: today's + carried-over jobs from earlier days that are still open
+// Delayed  → explicitly flagged 'delayed', or stuck in the same stage for 2+ hours without movement
+// Completed→ done jobs, scoped to today by default
+function filterJobs() {
+  if      (stageFilter === 'active')  return jobs.filter(j => j.current_stage !== 'done');
+  else if (stageFilter === 'delayed') return jobs.filter(isDelayedJob);
+  else if (stageFilter === 'done')    return jobs.filter(j => j.current_stage === 'done' && isToday(j.created_at));
+  return jobs.filter(j => j.current_stage !== 'done');
+}
 
-    if (sig !== lastJobsSignature) {
-      renderJobs();
-    }
-  } catch(e) { console.error(e); }
+function getVisibleJobs() {
+  const tabFiltered = filterJobs();
+  return searchQuery
+    ? tabFiltered.filter(j =>
+        (j.car_number        || '').toLowerCase().includes(searchQuery) ||
+        (j.car_model         || '').toLowerCase().includes(searchQuery) ||
+        (j.assigned_mechanic || '').toLowerCase().includes(searchQuery) ||
+        (j.job_number        || '').toLowerCase().includes(searchQuery))
+    : tabFiltered;
+}
+
+// Includes the *computed* delayed/carry-over flags (not just raw fields) so a
+// job that silently crosses the 2-hour-stuck threshold — purely from time
+// passing, with no DB change — still triggers a re-render on the next poll.
+function signatureOf(list) {
+  return list.map(j =>
+    `${j.id}:${j.current_stage}:${j.assigned_mechanic||''}:${isDelayedJob(j)}:${isCarryOver(j)}`
+  ).join('|');
+}
+
+function updateSectionCount(n) {
+  document.getElementById('section-count').textContent = n + ' job' + (n !== 1 ? 's' : '');
 }
 
 function renderJobs() {
   const grid = document.getElementById('jobGrid');
   grid.innerHTML = '';
 
-  const tabFiltered = currentTab === 'active'
-    ? jobs.filter(j => j.current_stage !== 'done')
-    : jobs.filter(j => j.current_stage === 'done');
+  const tabFiltered = filterJobs();
+  const visible = getVisibleJobs();
+  lastJobsSignature = signatureOf(visible);
+  updateSectionCount(visible.length);
 
-  lastJobsSignature = tabFiltered.map(j => `${j.id}:${j.current_stage}:${j.assigned_mechanic||''}`).join('|');
-
-  const filtered = searchQuery
-    ? tabFiltered.filter(j =>
-        (j.car_number        || '').toLowerCase().includes(searchQuery) ||
-        (j.car_model         || '').toLowerCase().includes(searchQuery) ||
-        (j.assigned_mechanic || '').toLowerCase().includes(searchQuery) ||
-        (j.job_number        || '').toLowerCase().includes(searchQuery)
-      )
-    : tabFiltered;
-
-  document.getElementById('section-title').textContent = currentTab === 'active' ? 'Active Jobs' : 'Completed Today';
-  document.getElementById('section-count').textContent = filtered.length + ' job' + (filtered.length !== 1 ? 's' : '');
-
-  if (filtered.length === 0) {
+  if (visible.length === 0) {
     const noMatch = searchQuery && tabFiltered.length > 0;
+    const labels  = { active: 'active', delayed: 'delayed', done: 'completed' };
     grid.innerHTML = `<div class="empty-state">
-      <div class="empty-icon">${noMatch ? '🔍' : (currentTab === 'active' ? '🎉' : '📋')}</div>
-      <div class="empty-title">${noMatch ? 'No matching jobs' : (currentTab === 'active' ? 'No active jobs' : 'No completed jobs today')}</div>
-      <div class="empty-sub">${noMatch ? 'Try a different search term' : (currentTab === 'active' ? 'Add a new job card to get started' : 'Completed jobs will appear here')}</div>
+      <div class="empty-icon">${noMatch ? '🔍' : (stageFilter === 'done' ? '📋' : '🎉')}</div>
+      <div class="empty-title">${noMatch ? 'No matching jobs' : 'No ' + (labels[stageFilter]||stageFilter) + ' jobs'}</div>
+      <div class="empty-sub">${noMatch ? 'Try a different search term' : (stageFilter === 'active' ? 'Nothing in progress right now' : '')}</div>
     </div>`;
     return;
   }
+  for (const job of visible) grid.appendChild(renderCard(job));
+}
 
-  for (const job of filtered) {
-    grid.appendChild(renderCard(job));
+// Re-renders just the affected card in place (no full grid rebuild). If the
+// job no longer belongs in the current tab/search view, it's removed instead.
+function updateCardInPlace(jobId) {
+  const job = jobs.find(j => j.id === jobId);
+  const grid = document.getElementById('jobGrid');
+  const existing = grid.querySelector(`.job-card[data-job-id="${jobId}"]`);
+  const visible = getVisibleJobs();
+  const shouldShow = !!job && visible.some(j => j.id === jobId);
+
+  if (job && shouldShow && existing) {
+    existing.replaceWith(renderCard(job));
+  } else if (existing && !shouldShow) {
+    existing.remove();
+    if (!grid.querySelector('.job-card')) renderJobs();
+  } else {
+    renderJobs();
   }
+
+  updateStats();
+  updateSectionCount(visible.length);
+  lastJobsSignature = signatureOf(visible);
 }
 
 function updateStats() {
-  const active = jobs.filter(j => j.current_stage !== 'done').length;
-  const done = jobs.filter(j => j.current_stage === 'done').length;
-  const delayed = jobs.filter(j => j.current_stage === 'delayed').length;
-  document.getElementById('stat-active').textContent = active;
-  document.getElementById('stat-done').textContent = done;
+  const active  = jobs.filter(j => j.current_stage !== 'done').length;
+  const done    = jobs.filter(j => j.current_stage === 'done' && isToday(j.created_at)).length;
+  const delayed = jobs.filter(isDelayedJob).length;
+
+  document.getElementById('stat-active').textContent  = active;
+  document.getElementById('stat-done').textContent    = done;
   document.getElementById('stat-delayed').textContent = delayed;
+
+  const ca = document.getElementById('count-active');  if (ca) ca.textContent = active;
+  const cd = document.getElementById('count-delayed'); if (cd) cd.textContent = delayed;
 }
 
-// ── TAB ────────────────────────────────────────
-function setTab(tab, btn) {
-  currentTab = tab;
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+// ── Filter tabs ──────────────────────────────────────────
+function setStageFilter(filter, btn) {
+  stageFilter = filter;
+  document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   lastJobsSignature = null;
   renderJobs();
 }
 
 function switchToTab(tab) {
-  currentTab = tab;
-  document.querySelectorAll('.tab-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.tab === tab);
-  });
+  const filter = tab === 'completed' ? 'done' : 'active';
+  stageFilter = filter;
+  document.querySelectorAll('.filter-tab').forEach(b =>
+    b.classList.toggle('active', b.dataset.filter === filter));
   lastJobsSignature = null;
   renderJobs();
 }
 
-// ── SEARCH ─────────────────────────────────────
+// ── Search ───────────────────────────────────────────────
 function applySearch(val) {
   searchQuery = val.toLowerCase();
   renderJobs();
 }
 
-// ── ADD JOB ────────────────────────────────────
+// ── Add job ──────────────────────────────────────────────
 function openAddModal() { document.getElementById('addModal').classList.add('open'); }
 
 async function submitJob() {
   const body = {
-    job_number: document.getElementById('f-jobnum').value.trim(),
-    car_number: document.getElementById('f-carnum').value.trim(),
-    car_model: document.getElementById('f-carmodel').value.trim(),
-    work_type: document.getElementById('f-worktype').value.trim(),
-    customer_name: document.getElementById('f-custname').value.trim(),
+    job_number:     document.getElementById('f-jobnum').value.trim(),
+    car_number:     document.getElementById('f-carnum').value.trim(),
+    car_model:      document.getElementById('f-carmodel').value.trim(),
+    work_type:      document.getElementById('f-worktype').value.trim(),
+    customer_name:  document.getElementById('f-custname').value.trim(),
     customer_phone: document.getElementById('f-custphone').value.trim(),
   };
-  if (!body.job_number || !body.car_number || !body.car_model) { alert('Job number, car number and car model are required.'); return; }
-  await fetch('/api/jobs', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  if (!body.job_number || !body.car_number || !body.car_model) {
+    alert('Job number, car number and car model are required.'); return;
+  }
+  await fetch('/api/jobs', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
   closeModal('addModal');
-  ['f-jobnum','f-carnum','f-carmodel','f-worktype','f-custname','f-custphone'].forEach(id => document.getElementById(id).value = '');
+  ['f-jobnum','f-carnum','f-carmodel','f-worktype','f-custname','f-custphone']
+    .forEach(id => document.getElementById(id).value = '');
   loadJobs();
 }
 
-// ── ASSIGN ─────────────────────────────────────
+// ── Assign mechanic ──────────────────────────────────────
 async function openAssign(jobId, carModel) {
   assigningJobId = jobId;
   document.getElementById('assignModalTitle').textContent = 'Assign — ' + carModel;
   const list = document.getElementById('mechanicList');
-  list.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0;">Loading…</div>';
+  list.innerHTML = '<div style="color:#bbb;font-size:13px;padding:8px 0;">Loading…</div>';
   document.getElementById('assignModal').classList.add('open');
   try {
     const res = await fetch('/api/mechanics');
     const mechanics = await res.json();
     list.innerHTML = mechanics.length === 0
-      ? '<p style="color:var(--text3);font-size:13px;">No mechanics available. Add some in Settings.</p>'
+      ? '<p style="color:#bbb;font-size:13px;">No mechanics. Add some in Settings.</p>'
       : mechanics.map(m => `
           <button class="mechanic-btn" onclick="assignMechanic(${JSON.stringify(m.name)})">
             <div class="mechanic-av">🔧</div>
             <div>
               <div>${m.name}</div>
-              ${m.speciality ? `<div style="font-size:11px;color:var(--text2);margin-top:2px">${m.speciality}</div>` : ''}
+              ${m.speciality ? `<div style="font-size:11px;color:#aaa;margin-top:2px">${m.speciality}</div>` : ''}
             </div>
           </button>`).join('');
   } catch {
-    list.innerHTML = '<p style="color:var(--text3);font-size:13px;">Could not load mechanics.</p>';
+    list.innerHTML = '<p style="color:#bbb;font-size:13px;">Could not load mechanics.</p>';
   }
 }
 
 async function assignMechanic(name) {
   await fetch(`/api/jobs/${assigningJobId}/assign`, {
-    method: 'PATCH', headers: {'Content-Type':'application/json'},
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ mechanic: name })
   });
   closeModal('assignModal');
@@ -854,14 +1104,46 @@ function assignCustom() {
   if (val) assignMechanic(val);
 }
 
-// ── ADVANCE STAGE ──────────────────────────────
+// ── Stage changes ────────────────────────────────────────
 async function advanceStage(jobId, stage) {
   await fetch(`/api/jobs/${jobId}/stage`, {
-    method: 'PATCH', headers: {'Content-Type':'application/json'},
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ stage, person: 'supervisor', note: '' })
   });
   await loadJobs();
   if (stage === 'done') switchToTab('completed');
+}
+
+// Mirrors the server's `updated_at = CURRENT_TIMESTAMP` (UTC, SQLite format)
+// so the locally-cached job reflects the just-applied change immediately.
+function markStageChangedLocally(jobId, stage) {
+  const job = jobs.find(j => j.id === jobId);
+  if (!job) return null;
+  job.current_stage = stage;
+  job.updated_at = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  return job;
+}
+
+async function changeStage(jobId, newStage, selectEl) {
+  if (newStage === 'delayed') {
+    delayingJobId = jobId;
+    document.getElementById('delay-reason').value = '';
+    document.getElementById('delay-other-wrap').style.display = 'none';
+    document.getElementById('delay-other').value = '';
+    document.getElementById('delayModal').classList.add('open');
+    const job = jobs.find(j => j.id == jobId);
+    if (job) selectEl.value = job.current_stage;
+    return;
+  }
+
+  await fetch(`/api/jobs/${jobId}/stage`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ stage: newStage, person: 'supervisor', note: '' })
+  });
+  markStageChangedLocally(jobId, newStage);
+
+  if (newStage === 'done') switchToTab('completed');
+  else updateCardInPlace(jobId);
 }
 
 function markDelayed(jobId) {
@@ -873,58 +1155,66 @@ function markDelayed(jobId) {
 }
 
 function toggleDelayOther() {
-  const isOther = document.getElementById('delay-reason').value === 'Other';
-  document.getElementById('delay-other-wrap').style.display = isOther ? 'block' : 'none';
+  document.getElementById('delay-other-wrap').style.display =
+    document.getElementById('delay-reason').value === 'Other' ? 'block' : 'none';
 }
 
 async function submitDelay() {
   const reason = document.getElementById('delay-reason').value;
-  if (!reason) { alert('Please select a reason for the delay.'); return; }
+  if (!reason) { alert('Please select a reason.'); return; }
   const note = reason === 'Other'
     ? (document.getElementById('delay-other').value.trim() || 'Other')
     : reason;
-  await fetch(`/api/jobs/${delayingJobId}/stage`, {
-    method: 'PATCH', headers: {'Content-Type':'application/json'},
+  const jobId = delayingJobId;
+  await fetch(`/api/jobs/${jobId}/stage`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ stage: 'delayed', person: 'supervisor', note })
   });
+  markStageChangedLocally(jobId, 'delayed');
   closeModal('delayModal');
+  updateCardInPlace(jobId);
+}
+
+// ── Delete job ───────────────────────────────────────────
+async function deleteJob(jobId) {
+  if (!confirm('Delete this job card? This cannot be undone.')) return;
+  await fetch(`/api/jobs/${jobId}`, { method: 'DELETE' });
   loadJobs();
 }
 
-// ── LOGS ───────────────────────────────────────
+// ── Logs ─────────────────────────────────────────────────
 async function viewLogs(jobId, title) {
   document.getElementById('logsModalTitle').textContent = title;
-  const res = await fetch(`/api/jobs/${jobId}/logs`);
+  const res  = await fetch(`/api/jobs/${jobId}/logs`);
   const logs = await res.json();
   const list = document.getElementById('logsList');
-  list.innerHTML = logs.length === 0 ? '<p style="color:var(--text3);font-size:13px;">No logs yet.</p>'
+  list.innerHTML = logs.length === 0
+    ? '<p style="color:#bbb;font-size:13px;">No logs yet.</p>'
     : logs.map(l => `
-      <div class="log-item">
-        <div class="log-dot"></div>
-        <div>
-          <div class="log-stage">${STAGE_LABELS[l.stage] || l.stage}</div>
-          <div class="log-person">${l.person || '—'} ${l.note ? '· ' + l.note : ''}</div>
-          <div class="log-time">${new Date(l.timestamp).toLocaleString('en-IN')}</div>
-        </div>
-      </div>`).join('');
+        <div class="log-item">
+          <div class="log-dot"></div>
+          <div>
+            <div class="log-stage">${STAGE_LABELS[l.stage] || l.stage}</div>
+            <div class="log-person">${l.person || '—'}${l.note ? ' · ' + l.note : ''}</div>
+            <div class="log-time">${new Date(l.timestamp).toLocaleString('en-IN')}</div>
+          </div>
+        </div>`).join('');
   document.getElementById('logsModal').classList.add('open');
 }
 
-// ── MODAL UTILS ────────────────────────────────
+// ── Modal utils ──────────────────────────────────────────
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-function closeModalOutside(e, id) { if (e.target === document.getElementById(id)) closeModal(id); }
+function closeModalOutside(e, id) {
+  if (e.target === document.getElementById(id)) closeModal(id);
+}
 
-// ── SETTINGS ───────────────────────────────────
+// ── Settings ─────────────────────────────────────────────
 function openSettings() {
   document.getElementById('settingsOverlay').classList.add('open');
   loadMechanicsSettings();
   loadWorkersSettings();
 }
-
-function closeSettings() {
-  document.getElementById('settingsOverlay').classList.remove('open');
-}
-
+function closeSettings() { document.getElementById('settingsOverlay').classList.remove('open'); }
 function closeSettingsOutside(e) {
   if (e.target === document.getElementById('settingsOverlay')) closeSettings();
 }
@@ -935,7 +1225,7 @@ async function loadMechanicsSettings() {
     const res = await fetch('/api/mechanics');
     const mechanics = await res.json();
     list.innerHTML = mechanics.length === 0
-      ? '<p style="color:var(--text3);font-size:13px;padding:4px 0;">No mechanics yet.</p>'
+      ? '<p style="color:#bbb;font-size:13px;padding:4px 0;">No mechanics yet.</p>'
       : mechanics.map(m => `
           <div class="mechanic-row">
             <div class="mechanic-av">🔧</div>
@@ -946,16 +1236,16 @@ async function loadMechanicsSettings() {
             <button class="mechanic-del-btn" onclick="removeMechanic(${m.id})">Remove</button>
           </div>`).join('');
   } catch {
-    list.innerHTML = '<p style="color:var(--text3);font-size:13px;">Could not load mechanics.</p>';
+    list.innerHTML = '<p style="color:#bbb;font-size:13px;">Could not load mechanics.</p>';
   }
 }
 
 async function addMechanic() {
-  const name = document.getElementById('s-mechname').value.trim();
+  const name       = document.getElementById('s-mechname').value.trim();
   const speciality = document.getElementById('s-mechspec').value.trim();
   if (!name) { alert('Mechanic name is required.'); return; }
-  const res = await fetch('/api/mechanics', {
-    method: 'POST', headers: {'Content-Type':'application/json'},
+  const res  = await fetch('/api/mechanics', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, speciality })
   });
   const data = await res.json();
@@ -970,23 +1260,13 @@ async function removeMechanic(id) {
   loadMechanicsSettings();
 }
 
-// ── WORKERS SETTINGS ───────────────────────────
-const ROLE_LABELS = {
-  jobcard_creator: 'Jobcard Creator',
-  supervisor: 'Supervisor',
-  mechanic: 'Mechanic',
-  inspector: 'Inspector',
-  washer: 'Washer',
-  all: 'All Roles (Admin/Tester)'
-};
-
 async function loadWorkersSettings() {
   const list = document.getElementById('workersMgmtList');
   try {
     const res = await fetch('/api/workers');
     const workers = await res.json();
     list.innerHTML = workers.length === 0
-      ? '<p style="color:var(--text3);font-size:13px;padding:4px 0;">No workers yet.</p>'
+      ? '<p style="color:#bbb;font-size:13px;padding:4px 0;">No workers yet.</p>'
       : workers.map(w => `
           <div class="mechanic-row">
             <div class="mechanic-av">👤</div>
@@ -998,26 +1278,26 @@ async function loadWorkersSettings() {
             <button class="mechanic-del-btn" onclick="removeWorker(${w.id})">Remove</button>
           </div>`).join('');
   } catch {
-    list.innerHTML = '<p style="color:var(--text3);font-size:13px;">Could not load workers.</p>';
+    list.innerHTML = '<p style="color:#bbb;font-size:13px;">Could not load workers.</p>';
   }
 }
 
 async function addWorker() {
-  const name = document.getElementById('s-wrkname').value.trim();
+  const name  = document.getElementById('s-wrkname').value.trim();
   const phone = document.getElementById('s-wrkphone').value.trim();
-  const role = document.getElementById('s-wrkrole').value;
-  if (!name) { alert('Worker name is required.'); return; }
+  const role  = document.getElementById('s-wrkrole').value;
+  if (!name)  { alert('Worker name is required.'); return; }
   if (!phone) { alert('Phone number is required.'); return; }
-  if (!role) { alert('Please select a role.'); return; }
-  const res = await fetch('/api/workers', {
-    method: 'POST', headers: {'Content-Type':'application/json'},
+  if (!role)  { alert('Please select a role.'); return; }
+  const res  = await fetch('/api/workers', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, phone, role })
   });
   const data = await res.json();
   if (data.error) { alert(data.error); return; }
-  document.getElementById('s-wrkname').value = '';
+  document.getElementById('s-wrkname').value  = '';
   document.getElementById('s-wrkphone').value = '';
-  document.getElementById('s-wrkrole').value = '';
+  document.getElementById('s-wrkrole').value  = '';
   loadWorkersSettings();
 }
 
@@ -1026,14 +1306,201 @@ async function removeWorker(id) {
   loadWorkersSettings();
 }
 
-// ── TIMERS ─────────────────────────────────────
+// ── Timers ───────────────────────────────────────────────
 function tickTimers() {
-  document.querySelectorAll('.card-timer[data-start]').forEach(el => {
-    el.textContent = '⏱ ' + timeSince(el.dataset.start);
+  document.querySelectorAll('.card-elapsed[data-start]').forEach(el => {
+    el.textContent = timeSince(el.dataset.start);
   });
 }
 
-// ── AUTO REFRESH ───────────────────────────────
+// ── Topbar date ──────────────────────────────────────────
+function updateTopbarDate() {
+  document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
+  });
+}
+updateTopbarDate();
+(function scheduleMidnight() {
+  const now = new Date();
+  const ms  = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1) - now;
+  setTimeout(() => { updateTopbarDate(); scheduleMidnight(); }, ms);
+})();
+
+// ── Stats page ───────────────────────────────────────────
+let statsViewActive = false;
+let statsRefreshInterval = null;
+const charts = {};
+const RANK_BADGES = ['gold', 'silver', 'bronze'];
+const RANK_MEDALS = ['🥇', '🥈', '🥉'];
+
+function fmtMinutes(mins) {
+  if (mins === null || mins === undefined || isNaN(mins)) return '—';
+  const m = Math.round(mins);
+  if (m < 60) return m + 'm';
+  return Math.floor(m / 60) + 'h ' + (m % 60 > 0 ? (m % 60) + 'm' : '');
+}
+
+function dayLabel(dateStr) {
+  return parseDbDate(dateStr + ' 00:00:00').toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
+}
+
+function toggleStatsView() {
+  statsViewActive = !statsViewActive;
+  document.getElementById('statsPage').style.display = statsViewActive ? 'block' : 'none';
+  document.querySelector('.stats-row').style.display = statsViewActive ? 'none' : '';
+  document.querySelector('.main').style.display = statsViewActive ? 'none' : '';
+
+  const btn = document.getElementById('navStatsBtn');
+  btn.textContent = statsViewActive ? '🏠 Dashboard' : '📊 Stats';
+  btn.classList.toggle('active', statsViewActive);
+
+  if (statsViewActive) {
+    loadStatsPage();
+    if (!statsRefreshInterval) statsRefreshInterval = setInterval(loadLeaderboards, 30000);
+  } else if (statsRefreshInterval) {
+    clearInterval(statsRefreshInterval);
+    statsRefreshInterval = null;
+  }
+}
+
+async function loadStatsPage() {
+  await Promise.all([loadStatsSnapshotAndCharts(), loadLeaderboards()]);
+}
+
+async function loadStatsSnapshotAndCharts() {
+  try {
+    const [daily, weekly, delays] = await Promise.all([
+      fetch('/api/stats/daily').then(r => r.json()),
+      fetch('/api/stats/weekly').then(r => r.json()),
+      fetch('/api/stats/delays').then(r => r.json()),
+    ]);
+    renderSnapshot(daily.today, weekly);
+    renderDailyChart(daily.days);
+    renderAvgTimeChart(daily.days);
+    renderDelaysChart(delays);
+  } catch (e) { console.error(e); }
+}
+
+function renderSnapshot(today, weekly) {
+  document.getElementById('snap-completed-today').textContent = today.completed;
+  document.getElementById('snap-avg-today').textContent = fmtMinutes(today.avg_minutes);
+  document.getElementById('snap-fastest-today').textContent = fmtMinutes(today.fastest_minutes);
+  document.getElementById('snap-week-total').textContent = weekly.this_week;
+
+  const pctEl = document.getElementById('snap-week-change');
+  const subEl = document.getElementById('snap-week-change-sub');
+  const pct = weekly.percent_change;
+  if (pct === null || pct === undefined) {
+    pctEl.textContent = '—';
+    pctEl.className = 'snapshot-num grey';
+    subEl.textContent = `Last week: ${weekly.last_week}`;
+  } else {
+    const sign = pct > 0 ? '+' : '';
+    pctEl.textContent = `${sign}${pct.toFixed(0)}%`;
+    pctEl.className = 'snapshot-num ' + (pct > 0 ? 'green' : (pct < 0 ? 'red' : 'grey'));
+    subEl.textContent = `Last week: ${weekly.last_week}`;
+  }
+}
+
+function baseChartOptions(extra = {}) {
+  return Object.assign({
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+  }, extra);
+}
+
+function renderDailyChart(days) {
+  const labels = days.map(d => dayLabel(d.date));
+  const data = days.map(d => d.completed);
+  if (charts.daily) {
+    charts.daily.data.labels = labels;
+    charts.daily.data.datasets[0].data = data;
+    charts.daily.update();
+    return;
+  }
+  charts.daily = new Chart(document.getElementById('chartDaily'), {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Completed', data, backgroundColor: '#CC1E12', borderRadius: 6, maxBarThickness: 38 }] },
+    options: baseChartOptions({ scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }),
+  });
+}
+
+function renderAvgTimeChart(days) {
+  const labels = days.map(d => dayLabel(d.date));
+  const data = days.map(d => d.avg_minutes !== null ? Math.round(d.avg_minutes) : null);
+  if (charts.avgTime) {
+    charts.avgTime.data.labels = labels;
+    charts.avgTime.data.datasets[0].data = data;
+    charts.avgTime.update();
+    return;
+  }
+  charts.avgTime = new Chart(document.getElementById('chartAvgTime'), {
+    type: 'line',
+    data: { labels, datasets: [{
+      label: 'Avg minutes', data,
+      borderColor: '#4CAF1A', backgroundColor: 'rgba(76,175,26,.12)',
+      tension: .35, fill: true, spanGaps: true, pointRadius: 3,
+    }] },
+    options: baseChartOptions({ scales: { y: { beginAtZero: true } } }),
+  });
+}
+
+function renderDelaysChart(delays) {
+  const labels = ['Parts', 'Customer', 'Mechanic', 'Other'];
+  const data = [delays.parts, delays.customer, delays.mechanic, delays.other];
+  const colors = ['#C86800', '#1E6FCC', '#7A3FCC', '#999999'];
+  if (charts.delays) {
+    charts.delays.data.datasets[0].data = data;
+    charts.delays.update();
+    return;
+  }
+  charts.delays = new Chart(document.getElementById('chartDelays'), {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 0 }] },
+    options: baseChartOptions({ plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } } }),
+  });
+}
+
+async function loadLeaderboards() {
+  try {
+    const [creators, mechanics] = await Promise.all([
+      fetch('/api/stats/leaderboard/creators').then(r => r.json()),
+      fetch('/api/stats/leaderboard/mechanics').then(r => r.json()),
+    ]);
+    renderCreatorsLeaderboard(creators);
+    renderMechanicsLeaderboard(mechanics);
+  } catch (e) { console.error(e); }
+}
+
+function renderCreatorsLeaderboard(list) {
+  const el = document.getElementById('creatorsLeaderboard');
+  if (!list.length) { el.innerHTML = '<p class="leaderboard-empty">No job cards created yet.</p>'; return; }
+  const max = list[0].count || 1;
+  el.innerHTML = list.map((c, i) => `
+    <div class="lb-row">
+      <div class="lb-rank${RANK_BADGES[i] ? ' ' + RANK_BADGES[i] : ''}">${i + 1}</div>
+      <div class="lb-info">
+        <div class="lb-name">${c.name}</div>
+        <div class="lb-meta">${c.count} job card${c.count !== 1 ? 's' : ''} created</div>
+        <div class="lb-bar-track"><div class="lb-bar-fill" style="width:${Math.round(c.count / max * 100)}%"></div></div>
+      </div>
+    </div>`).join('');
+}
+
+function renderMechanicsLeaderboard(list) {
+  const el = document.getElementById('mechanicsLeaderboard');
+  if (!list.length) { el.innerHTML = '<p class="leaderboard-empty">No completed jobs yet.</p>'; return; }
+  el.innerHTML = list.map((m, i) => `
+    <div class="lb-row">
+      <div class="lb-rank${RANK_BADGES[i] ? ' ' + RANK_BADGES[i] : ''}">${RANK_MEDALS[i] || (i + 1)}</div>
+      <div class="lb-info">
+        <div class="lb-name">${m.name}</div>
+        <div class="lb-meta">${m.completed} completed · avg ${fmtMinutes(m.avg_minutes)} / job</div>
+      </div>
+    </div>`).join('');
+}
+
+// ── Init ─────────────────────────────────────────────────
 loadJobs();
 setInterval(tickTimers, 1000);
 setInterval(loadJobs, 15000);

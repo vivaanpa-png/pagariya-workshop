@@ -51,5 +51,6 @@ for (const name of seedMechanics) insertMechanic.run(name);
 // Add inspector/washer assignment columns if they don't exist yet
 try { db.exec(`ALTER TABLE jobs ADD COLUMN assigned_inspector TEXT`); } catch {}
 try { db.exec(`ALTER TABLE jobs ADD COLUMN assigned_washer TEXT`); } catch {}
+try { db.exec(`ALTER TABLE jobs ADD COLUMN estimated_duration_minutes INTEGER`); } catch {}
 
 module.exports = db;

@@ -3,6 +3,8 @@ const express = require('express');
 const path = require('path');
 const db = require('./db/database');
 const whatsapp = require('./whatsapp');
+const jobcard = require('./routes/jobcard');
+const { startDailySummaryJob } = require('./dailySummary');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -10,6 +12,7 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 app.use(whatsapp);
+app.use(jobcard);
 
 // Get all active jobs
 app.get('/api/jobs', (req, res) => {
@@ -131,6 +134,121 @@ app.delete('/api/workers/:id', (req, res) => {
   res.json({ success: true });
 });
 
+// Delete a job (hard delete)
+app.delete('/api/jobs/:id', (req, res) => {
+  db.prepare(`DELETE FROM stage_logs WHERE job_id = ?`).run(req.params.id);
+  db.prepare(`DELETE FROM jobs WHERE id = ?`).run(req.params.id);
+  res.json({ success: true });
+});
+
+// ── Stats ────────────────────────────────────────────────
+
+// Jobs completed per day (and average job duration per day) for the last 7 days,
+// plus a "today" summary (completed / avg / fastest job duration in minutes).
+app.get('/api/stats/daily', (req, res) => {
+  const rows = db.prepare(`
+    SELECT
+      date(updated_at) AS day,
+      COUNT(*) AS completed,
+      AVG((julianday(updated_at) - julianday(created_at)) * 1440) AS avg_minutes
+    FROM jobs
+    WHERE current_stage = 'done' AND date(updated_at) >= date('now', '-6 days')
+    GROUP BY date(updated_at)
+  `).all();
+  const byDay = Object.fromEntries(rows.map(r => [r.day, r]));
+
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const date = db.prepare(`SELECT date('now', ?) AS d`).get(`-${i} days`).d;
+    const row = byDay[date];
+    days.push({
+      date,
+      completed: row ? row.completed : 0,
+      avg_minutes: row ? row.avg_minutes : null,
+    });
+  }
+
+  const today = db.prepare(`
+    SELECT
+      COUNT(*) AS completed,
+      AVG((julianday(updated_at) - julianday(created_at)) * 1440) AS avg_minutes,
+      MIN((julianday(updated_at) - julianday(created_at)) * 1440) AS fastest_minutes
+    FROM jobs
+    WHERE current_stage = 'done' AND date(updated_at) = date('now')
+  `).get();
+
+  res.json({ today, days });
+});
+
+// This week vs last week — total jobs created, with % change.
+app.get('/api/stats/weekly', (req, res) => {
+  const thisWeek = db.prepare(`
+    SELECT COUNT(*) AS n FROM jobs
+    WHERE date(created_at) >= date('now', '-6 days')
+  `).get().n;
+
+  const lastWeek = db.prepare(`
+    SELECT COUNT(*) AS n FROM jobs
+    WHERE date(created_at) >= date('now', '-13 days') AND date(created_at) < date('now', '-6 days')
+  `).get().n;
+
+  const percent_change = lastWeek > 0 ? ((thisWeek - lastWeek) / lastWeek) * 100 : null;
+
+  res.json({ this_week: thisWeek, last_week: lastWeek, percent_change });
+});
+
+// Top job-card creators, ranked by number of job cards created.
+app.get('/api/stats/leaderboard/creators', (req, res) => {
+  const rows = db.prepare(`
+    SELECT person AS name, COUNT(*) AS count
+    FROM stage_logs
+    WHERE stage = 'created' AND person IS NOT NULL AND TRIM(person) != ''
+    GROUP BY person
+    ORDER BY count DESC
+    LIMIT 10
+  `).all();
+  res.json(rows);
+});
+
+// Top mechanics, ranked by jobs completed, with average time per job.
+app.get('/api/stats/leaderboard/mechanics', (req, res) => {
+  const rows = db.prepare(`
+    SELECT
+      assigned_mechanic AS name,
+      COUNT(*) AS completed,
+      AVG((julianday(updated_at) - julianday(created_at)) * 1440) AS avg_minutes
+    FROM jobs
+    WHERE current_stage = 'done' AND assigned_mechanic IS NOT NULL AND TRIM(assigned_mechanic) != ''
+    GROUP BY assigned_mechanic
+    ORDER BY completed DESC
+    LIMIT 10
+  `).all();
+  res.json(rows);
+});
+
+// Breakdown of delay reasons into parts / customer / mechanic / other buckets,
+// based on the note recorded when a job is marked delayed.
+app.get('/api/stats/delays', (req, res) => {
+  const row = db.prepare(`
+    SELECT
+      SUM(CASE WHEN note LIKE '%part%'     THEN 1 ELSE 0 END) AS parts,
+      SUM(CASE WHEN note LIKE '%customer%' THEN 1 ELSE 0 END) AS customer,
+      SUM(CASE WHEN note LIKE '%mechanic%' THEN 1 ELSE 0 END) AS mechanic,
+      SUM(CASE WHEN note NOT LIKE '%part%' AND note NOT LIKE '%customer%' AND note NOT LIKE '%mechanic%'
+               THEN 1 ELSE 0 END) AS other
+    FROM stage_logs
+    WHERE stage = 'delayed' AND note IS NOT NULL AND TRIM(note) != ''
+  `).get();
+
+  res.json({
+    parts: row.parts || 0,
+    customer: row.customer || 0,
+    mechanic: row.mechanic || 0,
+    other: row.other || 0,
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`Pagariya Workshop server running on http://localhost:${PORT}`);
+  startDailySummaryJob();
 });

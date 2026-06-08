@@ -428,3 +428,5 @@ router.post('/webhook/whatsapp', (req, res) => {
 });
 
 module.exports = router;
+module.exports.notifyNextStage = notifyNextStage;
+module.exports.sendWhatsApp = sendWhatsApp;
