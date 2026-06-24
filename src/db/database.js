@@ -53,4 +53,8 @@ try { db.exec(`ALTER TABLE jobs ADD COLUMN assigned_inspector TEXT`); } catch {}
 try { db.exec(`ALTER TABLE jobs ADD COLUMN assigned_washer TEXT`); } catch {}
 try { db.exec(`ALTER TABLE jobs ADD COLUMN estimated_duration_minutes INTEGER`); } catch {}
 
+// Add telegram_id/language columns to workers if they don't exist yet
+try { db.exec(`ALTER TABLE workers ADD COLUMN telegram_id TEXT`); } catch {}
+try { db.exec(`ALTER TABLE workers ADD COLUMN language TEXT DEFAULT 'english'`); } catch {}
+
 module.exports = db;
