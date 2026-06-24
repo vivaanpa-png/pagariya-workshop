@@ -1,7 +1,16 @@
 const Database = require('better-sqlite3');
+const fs = require('fs');
 const path = require('path');
 
-const db = new Database(path.join(__dirname, '../../workshop.db'));
+// Railway mounts persistent volumes at RAILWAY_VOLUME_MOUNT_PATH. If a volume
+// is attached, store the DB there so it survives redeploys; otherwise fall
+// back to the local file (e.g. for development).
+const volumePath = process.env.RAILWAY_VOLUME_MOUNT_PATH;
+const dbPath = volumePath && fs.existsSync(volumePath)
+  ? path.join(volumePath, 'workshop.db')
+  : path.join(__dirname, '../../workshop.db');
+
+const db = new Database(dbPath);
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS jobs (

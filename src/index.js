@@ -250,6 +250,18 @@ app.get('/api/stats/delays', (req, res) => {
   });
 });
 
+// Full database export, for backing up data before a redeploy.
+app.post('/api/backup', (req, res) => {
+  const backup = {
+    exported_at: new Date().toISOString(),
+    jobs: db.prepare(`SELECT * FROM jobs`).all(),
+    stage_logs: db.prepare(`SELECT * FROM stage_logs`).all(),
+    mechanics: db.prepare(`SELECT * FROM mechanics`).all(),
+    workers: db.prepare(`SELECT * FROM workers`).all(),
+  };
+  res.json(backup);
+});
+
 app.listen(PORT, () => {
   console.log(`Pagariya Workshop server running on http://localhost:${PORT}`);
   startDailySummaryJob();
