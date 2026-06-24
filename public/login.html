@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login — Pagariya Auto Workshop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red:    #CC1E12;
+    --green:  #4CAF1A;
+    --page:   #F5F5F5;
+    --border: #E5E5E5;
+    --text:   #1A1A1A;
+    --text2:  #666666;
+    --text3:  #999999;
+    --white:  #FFFFFF;
+    --shadow-md: 0 4px 14px rgba(0,0,0,0.09);
+    --sf: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: var(--sf); color: var(--text); min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(160deg, var(--red) 0%, #8a140c 60%, #1A1A1A 100%);
+    padding: 20px;
+  }
+  .login-card {
+    width: 380px; max-width: 100%;
+    background: var(--white); border-radius: 20px;
+    box-shadow: var(--shadow-md); padding: 36px 32px;
+  }
+  .login-logo-wrap { display: flex; justify-content: center; margin-bottom: 18px; }
+  .login-logo { height: 56px; object-fit: contain; }
+  .login-brand {
+    font-size: 24px; font-weight: 800; color: var(--red);
+    letter-spacing: 0.04em; text-align: center; line-height: 1.15;
+  }
+  .login-tagline {
+    font-size: 11px; font-weight: 600; color: var(--green);
+    letter-spacing: 0.16em; text-transform: uppercase;
+    text-align: center; margin-top: 4px; margin-bottom: 28px;
+  }
+  .form-group { margin-bottom: 16px; }
+  .form-label {
+    font-size: 11px; font-weight: 600; color: var(--text2);
+    text-transform: uppercase; letter-spacing: .07em;
+    margin-bottom: 6px; display: block;
+  }
+  .form-input {
+    width: 100%; padding: 12px 14px;
+    background: var(--page); border: 1px solid var(--border);
+    border-radius: 10px; color: var(--text); font-size: 15px;
+    font-family: var(--sf); outline: none; transition: border-color .15s;
+  }
+  .form-input:focus { border-color: var(--green); background: #fff; }
+  .login-submit {
+    width: 100%; padding: 13px; border-radius: 12px;
+    background: var(--red); border: none; color: #fff;
+    font-size: 15px; font-weight: 700; cursor: pointer;
+    font-family: var(--sf); margin-top: 8px; transition: opacity .15s;
+  }
+  .login-submit:hover { opacity: .88; }
+  .login-error {
+    background: rgba(204,30,18,.08); border: 1px solid rgba(204,30,18,.25);
+    color: var(--red); font-size: 13px; font-weight: 500;
+    border-radius: 10px; padding: 10px 14px; margin-bottom: 16px;
+    display: none;
+  }
+  .login-error.show { display: block; }
+</style>
+</head>
+<body>
+
+<div class="login-card">
+  <div class="login-logo-wrap">
+    <img class="login-logo" src="/logo.png" alt="Pagariya Auto" onerror="this.style.display='none'">
+  </div>
+  <div class="login-brand">PAGARIYA AUTO WORKSHOP</div>
+  <div class="login-tagline">A New Era in Trusted Service</div>
+
+  <div class="login-error" id="loginError">Invalid username or password.</div>
+
+  <form id="loginForm" onsubmit="return handleLogin(event)">
+    <div class="form-group">
+      <label class="form-label">Username</label>
+      <input class="form-input" id="username" autocomplete="username" placeholder="Enter username" autofocus>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input class="form-input" id="password" type="password" autocomplete="current-password" placeholder="Enter password">
+    </div>
+    <button class="login-submit" type="submit">Log In</button>
+  </form>
+</div>
+
+<script>
+const AUTH_KEY = 'pagariya_auth';
+const CREDENTIALS = [
+  { username: 'manager', password: 'pagariya2026', role: 'manager' },
+  { username: 'admin',   password: 'pagariya@admin', role: 'admin' },
+];
+
+// Already logged in? Skip straight to the dashboard.
+(function redirectIfAuthed() {
+  try {
+    const session = JSON.parse(localStorage.getItem(AUTH_KEY));
+    if (session && session.username) window.location.replace('/');
+  } catch {}
+})();
+
+function handleLogin(e) {
+  e.preventDefault();
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+  const match = CREDENTIALS.find(c => c.username === username && c.password === password);
+  const errorEl = document.getElementById('loginError');
+
+  if (!match) {
+    errorEl.classList.add('show');
+    return false;
+  }
+
+  errorEl.classList.remove('show');
+  localStorage.setItem(AUTH_KEY, JSON.stringify({ username: match.username, role: match.role, loginAt: Date.now() }));
+  window.location.href = '/';
+  return false;
+}
+</script>
+</body>
+</html>

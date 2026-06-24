@@ -6,11 +6,18 @@ const whatsapp = require('./whatsapp');
 const telegram = require('./telegram');
 const jobcard = require('./routes/jobcard');
 const { startDailySummaryJob } = require('./dailySummary');
+const { startOvertimeAlertsJob } = require('./overtimeAlerts');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
+
+// Public kiosk view for the wall-mounted floor tablet — no login required.
+app.get('/floor', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/floor.html'));
+});
+
 app.use(express.static(path.join(__dirname, '../public')));
 app.use(whatsapp);
 app.use(telegram);
@@ -265,4 +272,5 @@ app.post('/api/backup', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Pagariya Workshop server running on http://localhost:${PORT}`);
   startDailySummaryJob();
+  startOvertimeAlertsJob();
 });

@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Pagariya Auto — Floor Display</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red:    #CC1E12;
+    --green:  #4CAF1A;
+    --page:   #121212;
+    --card:   #1E1E1E;
+    --border: #2E2E2E;
+    --text:   #FFFFFF;
+    --text2:  #B0B0B0;
+    --text3:  #777777;
+    --sf: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; user-select: none; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: var(--sf); background: var(--page); color: var(--text);
+    min-height: 100vh; display: flex; flex-direction: column;
+  }
+
+  .topbar {
+    padding: 18px 28px; display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .topbar-brand { font-size: 26px; font-weight: 800; color: var(--red); letter-spacing: 0.04em; }
+  .topbar-sub { font-size: 13px; color: var(--green); letter-spacing: .14em; text-transform: uppercase; font-weight: 600; margin-top: 2px; }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .live-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--green); animation: pulse-dot 2s infinite; }
+  @keyframes pulse-dot { 0%,100%{opacity:1;} 50%{opacity:.35;} }
+  .clock { font-size: 22px; font-weight: 700; font-family: 'Courier New', monospace; }
+
+  .floor-grid {
+    flex: 1; overflow-y: auto;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(340px,1fr));
+    gap: 18px; padding: 22px 28px 36px; align-content: start;
+  }
+
+  .floor-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 22px;
+    overflow: hidden; display: flex; flex-direction: column;
+    box-shadow: 0 6px 24px rgba(0,0,0,.4);
+  }
+  .floor-card.overtime { border-color: rgba(204,30,18,.6); box-shadow: 0 0 0 2px rgba(204,30,18,.35); }
+
+  .floor-card-body { padding: 22px 22px 16px; flex: 1; }
+  .floor-job-number {
+    font-size: 14px; font-weight: 700; color: var(--text3);
+    letter-spacing: .06em; text-transform: uppercase; margin-bottom: 8px;
+  }
+  .floor-car-model { font-size: 26px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.15; }
+  .floor-car-plate { font-size: 14px; color: var(--text2); font-family: 'Courier New', monospace; margin-top: 4px; letter-spacing: .04em; }
+
+  .floor-meta-row { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 20px; }
+  .floor-mechanic-label { font-size: 12px; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; }
+  .floor-mechanic-name { font-size: 19px; font-weight: 700; margin-top: 3px; }
+  .floor-elapsed { font-size: 32px; font-weight: 800; font-family: 'Courier New', monospace; text-align: right; }
+  .floor-elapsed.overtime { color: var(--red); }
+  .floor-stage-badge {
+    display: inline-block; margin-top: 12px; font-size: 12px; font-weight: 700;
+    padding: 5px 12px; border-radius: 20px; background: rgba(76,175,26,.16); color: var(--green);
+    letter-spacing: .03em;
+  }
+
+  .floor-actions { display: flex; }
+  .floor-btn {
+    flex: 1; padding: 26px 12px; border: none; font-size: 20px; font-weight: 800;
+    letter-spacing: .06em; cursor: pointer; font-family: var(--sf);
+    transition: opacity .12s; -webkit-tap-highlight-color: transparent;
+  }
+  .floor-btn:active { opacity: .75; }
+  .floor-btn-start { background: var(--green); color: #fff; }
+  .floor-btn-done  { background: var(--red); color: #fff; }
+
+  .empty-state {
+    grid-column: 1/-1; text-align: center; padding: 100px 20px; color: var(--text3);
+  }
+  .empty-icon { font-size: 56px; margin-bottom: 18px; }
+  .empty-title { font-size: 22px; font-weight: 700; color: var(--text2); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <div class="topbar-brand">PAGARIYA AUTO — FLOOR DISPLAY</div>
+    <div class="topbar-sub">Tap Start to begin · Tap Done to advance</div>
+  </div>
+  <div class="topbar-right">
+    <div class="live-dot"></div>
+    <div class="clock" id="clock">--:--:--</div>
+  </div>
+</div>
+
+<div class="floor-grid" id="floorGrid"></div>
+
+<script>
+// Stage order this kiosk advances jobs through; DONE moves a job one step
+// forward, START always snaps a job into 'inprogress'.
+const STAGE_ORDER = ['created','assigned','inprogress','inspection','washing','done'];
+const STAGE_LABELS = {
+  created: 'Created', assigned: 'Assigned', inprogress: 'In Progress',
+  inspection: 'Inspection', qc: 'Inspection', washing: 'Washing', wash: 'Washing',
+  failed_qc: 'Failed QC', delayed: 'Delayed', done: 'Done',
+};
+
+let jobs = [];
+
+function parseDbDate(dateStr) {
+  return new Date(dateStr.replace(' ', 'T') + 'Z');
+}
+function minutesSince(dateStr) {
+  return (Date.now() - parseDbDate(dateStr).getTime()) / 60000;
+}
+function formatElapsed(dateStr) {
+  const totalMin = Math.floor(minutesSince(dateStr));
+  if (totalMin < 60) return totalMin + 'm';
+  const h = Math.floor(totalMin / 60), m = totalMin % 60;
+  return h + 'h ' + (m > 0 ? m + 'm' : '');
+}
+
+function nextStage(current) {
+  const idx = STAGE_ORDER.indexOf(current);
+  if (idx === -1 || idx === STAGE_ORDER.length - 1) return 'done';
+  return STAGE_ORDER[idx + 1];
+}
+
+async function patchStage(jobId, stage, note) {
+  await fetch(`/api/jobs/${jobId}/stage`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ stage, person: 'Floor Tablet', note }),
+  });
+  loadJobs();
+}
+
+function startJob(jobId) { patchStage(jobId, 'inprogress', 'Started from floor tablet'); }
+function doneJob(jobId, currentStage) { patchStage(jobId, nextStage(currentStage), 'Advanced from floor tablet'); }
+
+function renderCard(job) {
+  const overtime = minutesSince(job.updated_at) > 90;
+  const card = document.createElement('div');
+  card.className = 'floor-card' + (overtime ? ' overtime' : '');
+  card.innerHTML = `
+    <div class="floor-card-body">
+      <div class="floor-job-number">#${job.job_number}</div>
+      <div class="floor-car-model">${job.car_model || 'Unknown Car'}</div>
+      <div class="floor-car-plate">${job.car_number}</div>
+      <div class="floor-stage-badge">${STAGE_LABELS[job.current_stage] || job.current_stage}</div>
+      <div class="floor-meta-row">
+        <div>
+          <div class="floor-mechanic-label">Mechanic</div>
+          <div class="floor-mechanic-name">${job.assigned_mechanic || 'Unassigned'}</div>
+        </div>
+        <div class="floor-elapsed${overtime ? ' overtime' : ''}">${formatElapsed(job.created_at)}</div>
+      </div>
+    </div>
+    <div class="floor-actions">
+      <button class="floor-btn floor-btn-start">START</button>
+      <button class="floor-btn floor-btn-done">DONE</button>
+    </div>`;
+  card.querySelector('.floor-btn-start').addEventListener('click', () => startJob(job.id));
+  card.querySelector('.floor-btn-done').addEventListener('click', () => doneJob(job.id, job.current_stage));
+  return card;
+}
+
+function renderGrid() {
+  const grid = document.getElementById('floorGrid');
+  grid.innerHTML = '';
+  const active = jobs.filter(j => j.current_stage !== 'done');
+  if (active.length === 0) {
+    grid.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">🎉</div>
+      <div class="empty-title">No active jobs right now</div>
+    </div>`;
+    return;
+  }
+  for (const job of active) grid.appendChild(renderCard(job));
+}
+
+async function loadJobs() {
+  try {
+    const res = await fetch('/api/jobs');
+    jobs = await res.json();
+    renderGrid();
+  } catch (e) { console.error(e); }
+}
+
+function tickClock() {
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString('en-IN', { hour12: false });
+}
+
+loadJobs();
+tickClock();
+setInterval(tickClock, 1000);
+setInterval(loadJobs, 8000);
+</script>
+</body>
+</html>

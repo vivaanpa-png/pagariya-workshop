@@ -88,9 +88,18 @@
     background: var(--page); border: 1px solid var(--border);
     color: var(--text2); font-size: 13px; font-weight: 600; cursor: pointer;
     font-family: var(--sf); transition: all .15s; white-space: nowrap;
+    text-decoration: none;
   }
   .nav-btn:hover { background: #e8e8e8; }
   .nav-btn.active { background: var(--text); color: #fff; border-color: var(--text); }
+  .logout-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 9px 16px; border-radius: 10px;
+    background: rgba(204,30,18,.07); border: 1px solid rgba(204,30,18,.2);
+    color: var(--red); font-size: 13px; font-weight: 600; cursor: pointer;
+    font-family: var(--sf); transition: all .15s; white-space: nowrap;
+  }
+  .logout-btn:hover { background: rgba(204,30,18,.14); }
 
   /* ══ STATS ═══════════════════════════════════════════ */
   .stats-row {
@@ -506,9 +515,11 @@
       <div class="live-dot"></div>
       <span class="live-label">Live</span>
     </div>
+    <a class="nav-btn" href="/floor" target="_blank" title="Floor Tablet View">🖥️ Floor View</a>
     <button class="nav-btn" id="navStatsBtn" onclick="toggleStatsView()" title="Stats">📊 Stats</button>
     <button class="gear-btn" onclick="openSettings()" title="Settings">⚙</button>
     <button class="add-btn" onclick="openAddModal()">+ New Job</button>
+    <button class="logout-btn" onclick="logout()" title="Log out">⏻ Logout</button>
   </div>
 </div>
 
@@ -775,6 +786,21 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script>
+// ── Auth guard ───────────────────────────────────────────
+// Session lives in localStorage only (no server-side session) — redirect to
+// the login screen immediately if it's missing, before any dashboard data loads.
+const AUTH_KEY = 'pagariya_auth';
+function getSession() {
+  try { return JSON.parse(localStorage.getItem(AUTH_KEY)); } catch { return null; }
+}
+function isAuthenticated() { return !!(getSession() && getSession().username); }
+if (!isAuthenticated()) window.location.replace('/login.html');
+
+function logout() {
+  localStorage.removeItem(AUTH_KEY);
+  window.location.href = '/login.html';
+}
+
 const STAGES = ['created','assigned','inprogress','inspection','washing','done'];
 const STAGE_LABELS = {
   created: 'Created', assigned: 'Assigned', inprogress: 'In Progress',
@@ -902,11 +928,11 @@ function renderCard(job) {
     </div>
     ${job.current_stage === 'created' ? `
     <div class="card-assign-wrap">
-      <button class="card-assign-btn" onclick="openAssign(${job.id},${JSON.stringify(job.car_model||'')})">+ Assign Mechanic</button>
+      <button class="card-assign-btn" onclick="openAssign(${job.id})">+ Assign Mechanic</button>
     </div>` : ''}
     <div class="card-footer">
       <select class="card-stage-select" onchange="changeStage(${job.id},this.value,this)">${stageOptions}</select>
-      <button class="card-logs-btn" onclick="viewLogs(${job.id},${JSON.stringify((job.car_model||'') + ' ' + job.car_number)})">Logs</button>
+      <button class="card-logs-btn" onclick="viewLogs(${job.id})">Logs</button>
       <button class="card-delete-btn" onclick="deleteJob(${job.id})" title="Delete">🗑</button>
     </div>`;
 
@@ -1066,9 +1092,10 @@ async function submitJob() {
 }
 
 // ── Assign mechanic ──────────────────────────────────────
-async function openAssign(jobId, carModel) {
+async function openAssign(jobId) {
   assigningJobId = jobId;
-  document.getElementById('assignModalTitle').textContent = 'Assign — ' + carModel;
+  const job = jobs.find(j => j.id === jobId);
+  document.getElementById('assignModalTitle').textContent = 'Assign — ' + (job ? job.car_model : '');
   const list = document.getElementById('mechanicList');
   list.innerHTML = '<div style="color:#bbb;font-size:13px;padding:8px 0;">Loading…</div>';
   document.getElementById('assignModal').classList.add('open');
@@ -1183,8 +1210,10 @@ async function deleteJob(jobId) {
 }
 
 // ── Logs ─────────────────────────────────────────────────
-async function viewLogs(jobId, title) {
-  document.getElementById('logsModalTitle').textContent = title;
+async function viewLogs(jobId) {
+  const job = jobs.find(j => j.id === jobId);
+  document.getElementById('logsModalTitle').textContent =
+    job ? `${job.car_model || ''} ${job.car_number}`.trim() : 'Job Timeline';
   const res  = await fetch(`/api/jobs/${jobId}/logs`);
   const logs = await res.json();
   const list = document.getElementById('logsList');
@@ -1195,8 +1224,9 @@ async function viewLogs(jobId, title) {
           <div class="log-dot"></div>
           <div>
             <div class="log-stage">${STAGE_LABELS[l.stage] || l.stage}</div>
-            <div class="log-person">${l.person || '—'}${l.note ? ' · ' + l.note : ''}</div>
-            <div class="log-time">${new Date(l.timestamp).toLocaleString('en-IN')}</div>
+            <div class="log-person">${l.person || '—'}${l.action ? ' · ' + l.action : ''}</div>
+            ${l.note ? `<div class="log-person">${l.note}</div>` : ''}
+            <div class="log-time">${parseDbDate(l.timestamp).toLocaleString('en-IN')}</div>
           </div>
         </div>`).join('');
   document.getElementById('logsModal').classList.add('open');
@@ -1501,9 +1531,11 @@ function renderMechanicsLeaderboard(list) {
 }
 
 // ── Init ─────────────────────────────────────────────────
-loadJobs();
-setInterval(tickTimers, 1000);
-setInterval(loadJobs, 15000);
+if (isAuthenticated()) {
+  loadJobs();
+  setInterval(tickTimers, 1000);
+  setInterval(loadJobs, 15000);
+}
 </script>
 </body>
 </html>
