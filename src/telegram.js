@@ -183,10 +183,12 @@ function getWorkersByTelegramId(telegramId) {
   return db.prepare('SELECT * FROM workers WHERE telegram_id = ?').all(String(telegramId));
 }
 
-// Returns the worker entry that can act as the given role:
-// prefers an exact role match, falls back to an 'all' entry, otherwise null.
-function getWorkerAs(workers, role) {
-  return workers.find(w => w.role === role)
+// Returns the worker entry that can act as any of the given roles: prefers
+// an exact match on one of `roles`, otherwise falls back to a worker whose
+// role is 'all' (which can act as — and bypasses the role check for — every
+// command in this file), otherwise null.
+function getWorkerAs(workers, ...roles) {
+  return workers.find(w => roles.includes(w.role))
       || workers.find(w => w.role === 'all')
       || null;
 }
@@ -351,7 +353,7 @@ function setLanguage(telegramId, language) {
 // the sender + floor supervisors. Restricted to advisor/floor_supervisor/all roles.
 async function handleJobCardPhoto(msg, workers, chatId) {
   const M = MESSAGES[languageOf(workers[0])];
-  const creator = getWorkerAs(workers, 'advisor') || getWorkerAs(workers, 'floor_supervisor');
+  const creator = getWorkerAs(workers, 'advisor', 'floor_supervisor');
   if (!creator) {
     sendTelegram(chatId, M.unknown_command);
     return;
@@ -528,7 +530,7 @@ function onMessage(msg) {
   if (lower.startsWith('delay ')) {
     const reason = body.slice(6).trim();
 
-    const asSpecialist = SPECIALIST_ROLES.map(r => getWorkerAs(workers, r)).find(Boolean);
+    const asSpecialist  = getWorkerAs(workers, ...SPECIALIST_ROLES);
     const asTestDriver  = getWorkerAs(workers, 'test_driver');
     const asWasher      = getWorkerAs(workers, 'washer');
     const asAdvisor     = getWorkerAs(workers, 'advisor');
