@@ -62,6 +62,16 @@ try { db.exec(`ALTER TABLE jobs ADD COLUMN assigned_inspector TEXT`); } catch {}
 try { db.exec(`ALTER TABLE jobs ADD COLUMN assigned_washer TEXT`); } catch {}
 try { db.exec(`ALTER TABLE jobs ADD COLUMN estimated_duration_minutes INTEGER`); } catch {}
 
+// Columns for the created → assigned → in_progress → test_drive → billing → washing → done pipeline.
+// assigned_mechanic holds the assigned specialist's name; specialist_role records
+// which specialist role (technician/electrician/denter) they were assigned as.
+try { db.exec(`ALTER TABLE jobs ADD COLUMN specialist_role TEXT`); } catch {}
+try { db.exec(`ALTER TABLE jobs ADD COLUMN assigned_test_driver TEXT`); } catch {}
+try { db.exec(`ALTER TABLE jobs ADD COLUMN created_by TEXT`); } catch {}
+try { db.exec(`ALTER TABLE jobs ADD COLUMN test_drive_note TEXT`); } catch {}
+try { db.exec(`ALTER TABLE jobs ADD COLUMN billing_done INTEGER DEFAULT 0`); } catch {}
+try { db.exec(`ALTER TABLE jobs ADD COLUMN washing_done INTEGER DEFAULT 0`); } catch {}
+
 // Add telegram_id/language columns to workers if they don't exist yet
 try { db.exec(`ALTER TABLE workers ADD COLUMN telegram_id TEXT`); } catch {}
 try { db.exec(`ALTER TABLE workers ADD COLUMN language TEXT DEFAULT 'english'`); } catch {}

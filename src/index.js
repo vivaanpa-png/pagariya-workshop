@@ -31,19 +31,23 @@ app.get('/api/jobs', (req, res) => {
   res.json(jobs);
 });
 
-// Create a new job
+// Create a new job. created_by is the advisor's name — required so they can
+// later be matched and notified when the job's test drive passes / completes.
 app.post('/api/jobs', (req, res) => {
-  const { job_number, car_number, car_model, work_type, customer_name, customer_phone } = req.body;
+  const { job_number, car_number, car_model, work_type, customer_name, customer_phone, created_by } = req.body;
   try {
     const result = db.prepare(`
-      INSERT INTO jobs (job_number, car_number, car_model, work_type, customer_name, customer_phone)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(job_number, car_number, car_model, work_type, customer_name, customer_phone);
+      INSERT INTO jobs (job_number, car_number, car_model, work_type, customer_name, customer_phone, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(job_number, car_number, car_model, work_type, customer_name, customer_phone, created_by || null);
 
     db.prepare(`
       INSERT INTO stage_logs (job_id, stage, person, action)
       VALUES (?, 'created', ?, 'Job created')
-    `).run(result.lastInsertRowid, customer_name);
+    `).run(result.lastInsertRowid, created_by || customer_name);
+
+    const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(result.lastInsertRowid);
+    telegram.notifyNextStage(job);
 
     res.json({ success: true, id: result.lastInsertRowid });
   } catch (err) {
@@ -51,11 +55,14 @@ app.post('/api/jobs', (req, res) => {
   }
 });
 
-// Update job stage
+// Update job stage — generic admin override (dashboard stage dropdown,
+// "mark delayed"). Always fires the same notification dispatcher used by the
+// Telegram bot, so a manual override still reaches the right person.
 app.patch('/api/jobs/:id/stage', (req, res) => {
   const { stage, person, note } = req.body;
   const { id } = req.params;
-  
+  const prevJob = db.prepare('SELECT * FROM jobs WHERE id = ?').get(id);
+
   db.prepare(`
     UPDATE jobs SET current_stage = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
   `).run(stage, id);
@@ -65,24 +72,62 @@ app.patch('/api/jobs/:id/stage', (req, res) => {
     VALUES (?, ?, ?, 'Stage updated', ?)
   `).run(id, stage, person, note);
 
+  const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(id);
+  telegram.notifyNextStage(job, prevJob);
+
   res.json({ success: true });
 });
 
-// Assign mechanic
+// Floor supervisor assigns a technician/electrician/denter to a job.
 app.patch('/api/jobs/:id/assign', (req, res) => {
-  const { mechanic } = req.body;
+  const { name, role, person } = req.body;
   const { id } = req.params;
 
-  db.prepare(`
-    UPDATE jobs SET assigned_mechanic = ?, current_stage = 'assigned', updated_at = CURRENT_TIMESTAMP WHERE id = ?
-  `).run(mechanic, id);
+  if (!name?.trim()) return res.status(400).json({ error: 'name is required' });
+  if (!telegram.SPECIALIST_ROLES.includes(role) && role !== 'all') {
+    return res.status(400).json({ error: `role must be one of: ${telegram.SPECIALIST_ROLES.join(', ')}, all` });
+  }
 
-  db.prepare(`
-    INSERT INTO stage_logs (job_id, stage, person, action)
-    VALUES (?, 'assigned', ?, 'Assigned to mechanic')
-  `).run(id, mechanic);
+  const job = telegram.assignSpecialist(id, { name: name.trim(), role }, person || 'Dashboard');
+  res.json({ success: true, job });
+});
 
-  res.json({ success: true });
+// Floor kiosk: specialist starts their assigned job.
+app.patch('/api/jobs/:id/floor-start', (req, res) => {
+  const job = telegram.advanceJobStage(req.params.id, 'in_progress', 'Floor Kiosk', 'Started from floor kiosk');
+  res.json({ success: true, job });
+});
+
+// Floor kiosk: specialist marks repair work done — sends the job to test drive.
+app.patch('/api/jobs/:id/floor-done', (req, res) => {
+  const job = telegram.advanceJobStage(req.params.id, 'test_drive', 'Floor Kiosk', 'Repair marked done from floor kiosk');
+  res.json({ success: true, job });
+});
+
+// Test driver records a pass/fail result via the dashboard (mirrors the
+// Telegram 2/3 replies).
+app.patch('/api/jobs/:id/test-drive', (req, res) => {
+  const { result, note, person } = req.body;
+  const { id } = req.params;
+  const testDriverName = person || 'Dashboard';
+
+  const job = result === 'pass'
+    ? telegram.passTestDrive(id, testDriverName)
+    : telegram.failTestDrive(id, testDriverName, note);
+
+  res.json({ success: true, job });
+});
+
+// Advisor marks billing complete for a job.
+app.patch('/api/jobs/:id/billing-done', (req, res) => {
+  const job = telegram.markBillingDone(req.params.id, req.body.person || 'Dashboard');
+  res.json({ success: true, job });
+});
+
+// Floor kiosk: washer marks washing complete for a job.
+app.patch('/api/jobs/:id/washing-done', (req, res) => {
+  const job = telegram.markWashingDone(req.params.id, req.body.person || 'Floor Kiosk');
+  res.json({ success: true, job });
 });
 
 // Get stage log for a job

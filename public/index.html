@@ -300,13 +300,13 @@
     font-size: 11px; font-weight: 600; padding: 4px 10px;
     border-radius: 20px; white-space: nowrap; flex-shrink: 0; margin-top: 2px;
   }
-  .stage-created    { background: #F0F0F0;             color: #555; }
-  .stage-assigned   { background: #FFF3E0;             color: #B86800; }
-  .stage-inprogress { background: rgba(76,175,26,.12); color: #2A7008; }
-  .stage-inspection { background: rgba(76,175,26,.1);  color: #2A7008; }
-  .stage-washing    { background: rgba(76,175,26,.12); color: #2A7008; }
-  .stage-done       { background: rgba(76,175,26,.1);  color: #2A7008; }
-  .stage-delayed    { background: rgba(204,30,18,.08); color: var(--red); }
+  .stage-created         { background: #F0F0F0;             color: #555; }
+  .stage-assigned        { background: #FFF3E0;             color: #B86800; }
+  .stage-in_progress     { background: rgba(76,175,26,.12); color: #2A7008; }
+  .stage-test_drive      { background: rgba(46,158,255,.12); color: #1976D2; }
+  .stage-billing_washing { background: rgba(46,158,255,.12); color: #1976D2; }
+  .stage-done            { background: rgba(76,175,26,.1);  color: #2A7008; }
+  .stage-delayed         { background: rgba(204,30,18,.08); color: var(--red); }
 
   .card-rows { padding: 0 16px 12px; display: flex; flex-direction: column; gap: 7px; }
   .card-row { display: flex; align-items: center; gap: 8px; }
@@ -681,6 +681,10 @@
         <input class="form-input" id="f-custphone" placeholder="98XXXXXXXX">
       </div>
     </div>
+    <div class="form-group">
+      <label class="form-label">Advisor (creating this job card)</label>
+      <input class="form-input" id="f-advisor" placeholder="Advisor name">
+    </div>
     <button class="form-submit" onclick="submitJob()">Create Job Card</button>
   </div>
 </div>
@@ -689,11 +693,18 @@
 <div class="modal-overlay" id="assignModal" onclick="closeModalOutside(event,'assignModal')">
   <div class="modal">
     <div class="modal-header">
-      <span class="modal-title" id="assignModalTitle">Assign Mechanic</span>
+      <span class="modal-title" id="assignModalTitle">Assign Specialist</span>
       <button class="modal-close" onclick="closeModal('assignModal')">✕</button>
     </div>
     <div class="mechanic-list" id="mechanicList"></div>
-    <input class="form-input" id="customMechanic" placeholder="Or type mechanic name…" style="margin-bottom:12px;">
+    <div class="form-row">
+      <input class="form-input" id="customMechanic" placeholder="Or type specialist name…">
+      <select class="form-input" id="customMechanicRole">
+        <option value="technician">Technician</option>
+        <option value="electrician">Electrician</option>
+        <option value="denter">Denter</option>
+      </select>
+    </div>
     <button class="form-submit" onclick="assignCustom()">Assign</button>
   </div>
 </div>
@@ -778,10 +789,12 @@
             <label class="form-label">Role</label>
             <select class="form-input" id="s-wrkrole">
               <option value="">Select role…</option>
-              <option value="jobcard_creator">Jobcard Creator</option>
-              <option value="supervisor">Supervisor</option>
-              <option value="mechanic">Mechanic</option>
-              <option value="inspector">Inspector</option>
+              <option value="advisor">Advisor</option>
+              <option value="floor_supervisor">Floor Supervisor</option>
+              <option value="technician">Technician</option>
+              <option value="electrician">Electrician</option>
+              <option value="denter">Denter</option>
+              <option value="test_driver">Test Driver</option>
               <option value="washer">Washer</option>
               <option value="all">All Roles (Admin/Tester)</option>
             </select>
@@ -810,16 +823,18 @@ function logout() {
   window.location.href = '/login.html';
 }
 
-const STAGES = ['created','assigned','inprogress','inspection','washing','done'];
+const STAGES = ['created','assigned','in_progress','test_drive','billing_washing','done'];
 const STAGE_LABELS = {
-  created: 'Created', assigned: 'Assigned', inprogress: 'In Progress',
-  inspection: 'Inspection', washing: 'Washing', done: 'Done', delayed: 'Delayed'
+  created: 'Created', assigned: 'Assigned', in_progress: 'In Progress',
+  test_drive: 'Test Drive', billing_washing: 'Billing & Washing', done: 'Done', delayed: 'Delayed'
 };
 const ROLE_LABELS = {
-  jobcard_creator: 'Jobcard Creator', supervisor: 'Supervisor',
-  mechanic: 'Mechanic', inspector: 'Inspector', washer: 'Washer',
+  advisor: 'Advisor', floor_supervisor: 'Floor Supervisor',
+  technician: 'Technician', electrician: 'Electrician', denter: 'Denter',
+  test_driver: 'Test Driver', washer: 'Washer',
   all: 'All Roles (Admin/Tester)'
 };
+const SPECIALIST_ROLES = ['technician', 'electrician', 'denter'];
 
 let stageFilter = 'active';
 let assigningJobId = null;
@@ -913,9 +928,26 @@ function renderCard(job) {
       </div>
       <div class="card-row">
         <span class="row-icon">👨‍🔧</span>
-        <span class="row-label">Mechanic</span>
+        <span class="row-label">${ROLE_LABELS[job.specialist_role] || 'Specialist'}</span>
         <span class="row-val">${job.assigned_mechanic || '<span style="color:#bbb;font-style:italic">Unassigned</span>'}</span>
       </div>
+      ${job.current_stage === 'billing_washing' || job.current_stage === 'done' ? `
+      <div class="card-row">
+        <span class="row-icon">🧾</span>
+        <span class="row-label">Billing</span>
+        <span class="row-val">${job.billing_done ? '✅ Done' : '⏳ Pending'}</span>
+      </div>
+      <div class="card-row">
+        <span class="row-icon">🚿</span>
+        <span class="row-label">Washing</span>
+        <span class="row-val">${job.washing_done ? '✅ Done' : '⏳ Pending'}</span>
+      </div>` : ''}
+      ${job.test_drive_note && job.current_stage === 'in_progress' ? `
+      <div class="card-row">
+        <span class="row-icon">⚠️</span>
+        <span class="row-label">TD Note</span>
+        <span class="row-val">${job.test_drive_note}</span>
+      </div>` : ''}
       <div class="card-row">
         <span class="row-icon">👤</span>
         <span class="row-label">Customer</span>
@@ -937,7 +969,11 @@ function renderCard(job) {
     </div>
     ${job.current_stage === 'created' ? `
     <div class="card-assign-wrap">
-      <button class="card-assign-btn" onclick="openAssign(${job.id})">+ Assign Mechanic</button>
+      <button class="card-assign-btn" onclick="openAssign(${job.id})">+ Assign Specialist</button>
+    </div>` : ''}
+    ${job.current_stage === 'billing_washing' && !job.billing_done ? `
+    <div class="card-assign-wrap">
+      <button class="card-assign-btn" onclick="markBillingDone(${job.id})">✓ Mark Billing Done</button>
     </div>` : ''}
     <div class="card-footer">
       <select class="card-stage-select" onchange="changeStage(${job.id},this.value,this)">${stageOptions}</select>
@@ -1086,6 +1122,7 @@ async function submitJob() {
     work_type:      document.getElementById('f-worktype').value.trim(),
     customer_name:  document.getElementById('f-custname').value.trim(),
     customer_phone: document.getElementById('f-custphone').value.trim(),
+    created_by:     document.getElementById('f-advisor').value.trim(),
   };
   if (!body.job_number || !body.car_number || !body.car_model) {
     alert('Job number, car number and car model are required.'); return;
@@ -1095,12 +1132,12 @@ async function submitJob() {
     body: JSON.stringify(body)
   });
   closeModal('addModal');
-  ['f-jobnum','f-carnum','f-carmodel','f-worktype','f-custname','f-custphone']
+  ['f-jobnum','f-carnum','f-carmodel','f-worktype','f-custname','f-custphone','f-advisor']
     .forEach(id => document.getElementById(id).value = '');
   loadJobs();
 }
 
-// ── Assign mechanic ──────────────────────────────────────
+// ── Assign specialist (technician/electrician/denter) ────
 async function openAssign(jobId) {
   assigningJobId = jobId;
   const job = jobs.find(j => j.id === jobId);
@@ -1109,27 +1146,28 @@ async function openAssign(jobId) {
   list.innerHTML = '<div style="color:#bbb;font-size:13px;padding:8px 0;">Loading…</div>';
   document.getElementById('assignModal').classList.add('open');
   try {
-    const res = await fetch('/api/mechanics');
-    const mechanics = await res.json();
-    list.innerHTML = mechanics.length === 0
-      ? '<p style="color:#bbb;font-size:13px;">No mechanics. Add some in Settings.</p>'
-      : mechanics.map(m => `
-          <button class="mechanic-btn" onclick="assignMechanic(${JSON.stringify(m.name)})">
+    const res = await fetch('/api/workers');
+    const workers = await res.json();
+    const specialists = workers.filter(w => SPECIALIST_ROLES.includes(w.role));
+    list.innerHTML = specialists.length === 0
+      ? '<p style="color:#bbb;font-size:13px;">No technicians, electricians or denters. Add some in Settings.</p>'
+      : specialists.map(w => `
+          <button class="mechanic-btn" onclick='assignMechanic(${JSON.stringify(w.name)}, ${JSON.stringify(w.role)})'>
             <div class="mechanic-av">🔧</div>
             <div>
-              <div>${m.name}</div>
-              ${m.speciality ? `<div style="font-size:11px;color:#aaa;margin-top:2px">${m.speciality}</div>` : ''}
+              <div>${w.name}</div>
+              <div style="font-size:11px;color:#aaa;margin-top:2px">${ROLE_LABELS[w.role] || w.role}</div>
             </div>
           </button>`).join('');
   } catch {
-    list.innerHTML = '<p style="color:#bbb;font-size:13px;">Could not load mechanics.</p>';
+    list.innerHTML = '<p style="color:#bbb;font-size:13px;">Could not load specialists.</p>';
   }
 }
 
-async function assignMechanic(name) {
+async function assignMechanic(name, role) {
   await fetch(`/api/jobs/${assigningJobId}/assign`, {
     method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ mechanic: name })
+    body: JSON.stringify({ name, role, person: 'Dashboard' })
   });
   closeModal('assignModal');
   loadJobs();
@@ -1137,14 +1175,24 @@ async function assignMechanic(name) {
 
 function assignCustom() {
   const val = document.getElementById('customMechanic').value.trim();
-  if (val) assignMechanic(val);
+  const role = document.getElementById('customMechanicRole').value;
+  if (val) assignMechanic(val, role);
+}
+
+// ── Advisor marks billing done from the dashboard ─────────
+async function markBillingDone(jobId) {
+  await fetch(`/api/jobs/${jobId}/billing-done`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ person: 'Dashboard' })
+  });
+  loadJobs();
 }
 
 // ── Stage changes ────────────────────────────────────────
 async function advanceStage(jobId, stage) {
   await fetch(`/api/jobs/${jobId}/stage`, {
     method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ stage, person: 'supervisor', note: '' })
+    body: JSON.stringify({ stage, person: 'Dashboard', note: '' })
   });
   await loadJobs();
   if (stage === 'done') switchToTab('completed');
@@ -1174,7 +1222,7 @@ async function changeStage(jobId, newStage, selectEl) {
 
   await fetch(`/api/jobs/${jobId}/stage`, {
     method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ stage: newStage, person: 'supervisor', note: '' })
+    body: JSON.stringify({ stage: newStage, person: 'Dashboard', note: '' })
   });
   markStageChangedLocally(jobId, newStage);
 
@@ -1204,7 +1252,7 @@ async function submitDelay() {
   const jobId = delayingJobId;
   await fetch(`/api/jobs/${jobId}/stage`, {
     method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ stage: 'delayed', person: 'supervisor', note })
+    body: JSON.stringify({ stage: 'delayed', person: 'Dashboard', note })
   });
   markStageChangedLocally(jobId, 'delayed');
   closeModal('delayModal');

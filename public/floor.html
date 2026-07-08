@@ -65,8 +65,9 @@
   .floor-stage-badge {
     display: inline-block; margin-top: 12px; font-size: 12px; font-weight: 700;
     padding: 5px 12px; border-radius: 20px; background: rgba(76,175,26,.16); color: var(--green);
-    letter-spacing: .03em;
+    letter-spacing: .03em; text-transform: uppercase;
   }
+  .floor-stage-badge.washing { background: rgba(46,158,255,.16); color: #2E9EFF; }
 
   .floor-actions { display: flex; }
   .floor-btn {
@@ -77,6 +78,11 @@
   .floor-btn:active { opacity: .75; }
   .floor-btn-start { background: var(--green); color: #fff; }
   .floor-btn-done  { background: var(--red); color: #fff; }
+
+  .section-title {
+    grid-column: 1/-1; font-size: 13px; font-weight: 700; color: var(--text3);
+    text-transform: uppercase; letter-spacing: .1em; margin: 4px 0 -6px;
+  }
 
   .empty-state {
     grid-column: 1/-1; text-align: center; padding: 100px 20px; color: var(--text3);
@@ -101,14 +107,13 @@
 <div class="floor-grid" id="floorGrid"></div>
 
 <script>
-// Stage order this kiosk advances jobs through; DONE moves a job one step
-// forward, START always snaps a job into 'inprogress'.
-const STAGE_ORDER = ['created','assigned','inprogress','inspection','washing','done'];
-const STAGE_LABELS = {
-  created: 'Created', assigned: 'Assigned', inprogress: 'In Progress',
-  inspection: 'Inspection', qc: 'Inspection', washing: 'Washing', wash: 'Washing',
-  failed_qc: 'Failed QC', delayed: 'Delayed', done: 'Done',
-};
+// This kiosk is shared by technicians, electricians, denters and washers —
+// there's no per-worker login, so it shows every job currently sitting with
+// a specialist ('assigned'/'in_progress') or waiting to be washed
+// ('billing_washing' with washing not yet done), and any floor worker can
+// act on any card.
+const SPECIALIST_STAGE_LABELS = { assigned: 'Assigned — Tap Start', in_progress: 'In Progress — Tap Done' };
+const SPECIALIST_ROLE_LABELS = { technician: 'Technician', electrician: 'Electrician', denter: 'Denter' };
 
 let jobs = [];
 
@@ -125,62 +130,97 @@ function formatElapsed(dateStr) {
   return h + 'h ' + (m > 0 ? m + 'm' : '');
 }
 
-function nextStage(current) {
-  const idx = STAGE_ORDER.indexOf(current);
-  if (idx === -1 || idx === STAGE_ORDER.length - 1) return 'done';
-  return STAGE_ORDER[idx + 1];
-}
-
-async function patchStage(jobId, stage, note) {
-  await fetch(`/api/jobs/${jobId}/stage`, {
+async function patchJob(jobId, path, body) {
+  await fetch(`/api/jobs/${jobId}/${path}`, {
     method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ stage, person: 'Floor Tablet', note }),
+    body: JSON.stringify({ person: 'Floor Kiosk', ...body }),
   });
   loadJobs();
 }
 
-function startJob(jobId) { patchStage(jobId, 'inprogress', 'Started from floor tablet'); }
-function doneJob(jobId, currentStage) { patchStage(jobId, nextStage(currentStage), 'Advanced from floor tablet'); }
+function startRepair(jobId) { patchJob(jobId, 'floor-start'); }
+function doneRepair(jobId)  { patchJob(jobId, 'floor-done'); }
+function doneWashing(jobId) { patchJob(jobId, 'washing-done'); }
 
-function renderCard(job) {
+function renderSpecialistCard(job) {
   const overtime = minutesSince(job.updated_at) > 90;
   const card = document.createElement('div');
   card.className = 'floor-card' + (overtime ? ' overtime' : '');
+  const roleLabel = SPECIALIST_ROLE_LABELS[job.specialist_role] || 'Specialist';
   card.innerHTML = `
     <div class="floor-card-body">
-      <div class="floor-job-number">#${job.job_number}</div>
+      <div class="floor-job-number">#${job.job_number} · ${roleLabel}</div>
       <div class="floor-car-model">${job.car_model || 'Unknown Car'}</div>
       <div class="floor-car-plate">${job.car_number}</div>
-      <div class="floor-stage-badge">${STAGE_LABELS[job.current_stage] || job.current_stage}</div>
+      <div class="floor-stage-badge">${SPECIALIST_STAGE_LABELS[job.current_stage] || job.current_stage}</div>
       <div class="floor-meta-row">
         <div>
-          <div class="floor-mechanic-label">Mechanic</div>
+          <div class="floor-mechanic-label">${roleLabel}</div>
           <div class="floor-mechanic-name">${job.assigned_mechanic || 'Unassigned'}</div>
         </div>
         <div class="floor-elapsed${overtime ? ' overtime' : ''}">${formatElapsed(job.created_at)}</div>
       </div>
     </div>
     <div class="floor-actions">
-      <button class="floor-btn floor-btn-start">START</button>
+      ${job.current_stage === 'assigned'
+        ? `<button class="floor-btn floor-btn-start">START</button>`
+        : `<button class="floor-btn floor-btn-done">DONE</button>`}
+    </div>`;
+  const startBtn = card.querySelector('.floor-btn-start');
+  const doneBtn = card.querySelector('.floor-btn-done');
+  if (startBtn) startBtn.addEventListener('click', () => startRepair(job.id));
+  if (doneBtn) doneBtn.addEventListener('click', () => doneRepair(job.id));
+  return card;
+}
+
+function renderWashingCard(job) {
+  const overtime = minutesSince(job.updated_at) > 90;
+  const card = document.createElement('div');
+  card.className = 'floor-card' + (overtime ? ' overtime' : '');
+  card.innerHTML = `
+    <div class="floor-card-body">
+      <div class="floor-job-number">#${job.job_number} · Washing</div>
+      <div class="floor-car-model">${job.car_model || 'Unknown Car'}</div>
+      <div class="floor-car-plate">${job.car_number}</div>
+      <div class="floor-stage-badge washing">Ready for Washing</div>
+      <div class="floor-meta-row">
+        <div>
+          <div class="floor-mechanic-label">Billing</div>
+          <div class="floor-mechanic-name">${job.billing_done ? 'Done' : 'Pending'}</div>
+        </div>
+        <div class="floor-elapsed${overtime ? ' overtime' : ''}">${formatElapsed(job.created_at)}</div>
+      </div>
+    </div>
+    <div class="floor-actions">
       <button class="floor-btn floor-btn-done">DONE</button>
     </div>`;
-  card.querySelector('.floor-btn-start').addEventListener('click', () => startJob(job.id));
-  card.querySelector('.floor-btn-done').addEventListener('click', () => doneJob(job.id, job.current_stage));
+  card.querySelector('.floor-btn-done').addEventListener('click', () => doneWashing(job.id));
   return card;
 }
 
 function renderGrid() {
   const grid = document.getElementById('floorGrid');
   grid.innerHTML = '';
-  const active = jobs.filter(j => j.current_stage !== 'done');
-  if (active.length === 0) {
+
+  const repairJobs = jobs.filter(j => j.current_stage === 'assigned' || j.current_stage === 'in_progress');
+  const washingJobs = jobs.filter(j => j.current_stage === 'billing_washing' && !j.washing_done);
+
+  if (repairJobs.length === 0 && washingJobs.length === 0) {
     grid.innerHTML = `<div class="empty-state">
       <div class="empty-icon">🎉</div>
       <div class="empty-title">No active jobs right now</div>
     </div>`;
     return;
   }
-  for (const job of active) grid.appendChild(renderCard(job));
+
+  if (repairJobs.length) {
+    grid.insertAdjacentHTML('beforeend', `<div class="section-title">Repair Floor</div>`);
+    for (const job of repairJobs) grid.appendChild(renderSpecialistCard(job));
+  }
+  if (washingJobs.length) {
+    grid.insertAdjacentHTML('beforeend', `<div class="section-title">Washing Bay</div>`);
+    for (const job of washingJobs) grid.appendChild(renderWashingCard(job));
+  }
 }
 
 async function loadJobs() {
