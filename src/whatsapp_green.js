@@ -700,6 +700,10 @@ router.post('/webhook/whatsapp-green', async (req, res) => {
   const text = body.messageData?.textMessageData?.textMessage?.trim() || '';
   const hasImage = body.messageData?.typeMessage === 'imageMessage';
   const imageUrl = body.messageData?.imageMessage?.downloadUrl || null;
+  console.log('Message received - hasImage:', hasImage, 'typeMessage:', body.messageData?.typeMessage, 'imageUrl:', imageUrl);
+  if (hasImage && !imageUrl) {
+    console.log('Full messageData:', JSON.stringify(body.messageData, null, 2));
+  }
   // now process same as telegram.js using phone to look up worker
   processMessage({ phone, text, hasImage, imageUrl }).catch(err => console.error('Green API webhook handling failed:', err.message));
 });
