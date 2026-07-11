@@ -1,11 +1,10 @@
 const cron = require('node-cron');
 const db = require('./db/database');
-const telegram = require('./telegram');
+const whatsappGreen = require('./whatsapp_green');
 
 const STAGE_LABELS = {
-  created: 'Created', assigned: 'Assigned', inprogress: 'In Progress',
-  inspection: 'Inspection', qc: 'Inspection', washing: 'Washing', wash: 'Washing',
-  failed_qc: 'Failed QC', delayed: 'Delayed',
+  created: 'Created', assigned: 'Assigned', in_progress: 'In Progress',
+  test_drive: 'Test Drive', billing_washing: 'Billing & Washing', delayed: 'Delayed',
 };
 
 const OVERTIME_MINUTES = 90;
@@ -30,16 +29,16 @@ function checkOvertimeJobs() {
   if (!overtimeJobs.length) return;
 
   const recipients = db.prepare(
-    `SELECT * FROM workers WHERE role IN ('supervisor', 'all') AND telegram_id IS NOT NULL`
+    `SELECT * FROM workers WHERE role IN ('floor_supervisor', 'all') AND phone IS NOT NULL`
   ).all();
   if (!recipients.length) return;
 
   for (const job of overtimeJobs) {
     const stageLabel = STAGE_LABELS[job.current_stage] || job.current_stage;
     const elapsed = formatDuration(minutesSince(job.updated_at));
-    const message = `⏰ Overtime alert — Job #${job.job_number} ${job.car_model || ''} has been in ${stageLabel} for ${elapsed}. Mechanic: ${job.assigned_mechanic || 'Unassigned'}. Please check.`;
+    const message = `⏰ Overtime alert — Job #${job.job_number} ${job.car_model || ''} has been in ${stageLabel} for ${elapsed}. Specialist: ${job.assigned_mechanic || 'Unassigned'}. Please check.`;
     for (const worker of recipients) {
-      telegram.sendTelegram(worker.telegram_id, message);
+      whatsappGreen.sendGreenApiMessage(worker.phone, message);
     }
   }
 }

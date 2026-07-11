@@ -4,6 +4,7 @@ const path = require('path');
 const db = require('./db/database');
 const whatsapp = require('./whatsapp');
 const telegram = require('./telegram');
+const whatsappGreen = require('./whatsapp_green');
 const jobcard = require('./routes/jobcard');
 const { startDailySummaryJob } = require('./dailySummary');
 const { startOvertimeAlertsJob } = require('./overtimeAlerts');
@@ -21,6 +22,7 @@ app.get('/floor', (req, res) => {
 app.use(express.static(path.join(__dirname, '../public')));
 app.use(whatsapp);
 app.use(telegram);
+app.use(whatsappGreen);
 app.use(jobcard);
 
 // Get all active jobs
@@ -318,4 +320,5 @@ app.listen(PORT, () => {
   console.log(`Pagariya Workshop server running on http://localhost:${PORT}`);
   startDailySummaryJob();
   startOvertimeAlertsJob();
+  whatsappGreen.setupWebhook();
 });
