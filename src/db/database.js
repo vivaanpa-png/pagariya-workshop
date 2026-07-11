@@ -76,4 +76,11 @@ try { db.exec(`ALTER TABLE jobs ADD COLUMN washing_done INTEGER DEFAULT 0`); } c
 try { db.exec(`ALTER TABLE workers ADD COLUMN telegram_id TEXT`); } catch {}
 try { db.exec(`ALTER TABLE workers ADD COLUMN language TEXT DEFAULT 'english'`); } catch {}
 
+// Instagram first-contact confirmation flow (see src/instagram_messages.js).
+// confirmed: worker replied YES to the details-confirmation DM.
+// needs_review: worker replied NO — an admin must correct their details via
+// the dashboard (no self-edit via DM).
+try { db.exec(`ALTER TABLE workers ADD COLUMN confirmed INTEGER DEFAULT 0`); } catch {}
+try { db.exec(`ALTER TABLE workers ADD COLUMN needs_review INTEGER DEFAULT 0`); } catch {}
+
 module.exports = db;

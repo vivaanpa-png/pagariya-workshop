@@ -38,7 +38,7 @@ function checkOvertimeJobs() {
     const elapsed = formatDuration(minutesSince(job.updated_at));
     const message = `⏰ Overtime alert — Job #${job.job_number} ${job.car_model || ''} has been in ${stageLabel} for ${elapsed}. Specialist: ${job.assigned_mechanic || 'Unassigned'}. Please check.`;
     for (const worker of recipients) {
-      whatsappGreen.sendGreenApiMessage(worker.phone, message);
+      whatsappGreen.sendMessage(worker.phone, message);
     }
   }
 }

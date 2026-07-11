@@ -8,7 +8,7 @@
  * separate "linking" step like Telegram's telegram_id.
  *
  * SETUP: Set GREEN_API_INSTANCE_ID and GREEN_API_TOKEN in .env. On server
- * startup, setupWebhook() points the Green API instance's webhookUrl at
+ * startup, setWebhook() points the Green API instance's webhookUrl at
  * POST /webhook/whatsapp-green on this server.
  *
  * LANGUAGE SELECTION: identical to the Telegram bot — the first time a
@@ -48,6 +48,10 @@ const db = require('./db/database');
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+const INSTANCE_ID = process.env.GREEN_API_INSTANCE_ID;
+const API_TOKEN = process.env.GREEN_API_TOKEN;
+const BASE_URL = `https://api.greenapi.com/waInstance${INSTANCE_ID}`;
+
 const JOBCARD_VISION_PROMPT = "You are extracting data from a Maruti Suzuki service job card. Extract these fields exactly as they appear: job_number, car_model, car_plate, customer_name, customer_phone, work_description. Return ONLY a valid JSON object with these exact keys, no other text.";
 
 const SPECIALIST_ROLES = ['technician', 'electrician', 'denter'];
@@ -56,8 +60,6 @@ const ROLE_LABELS = {
   test_driver: 'Test Driver', washer: 'Washer', advisor: 'Advisor',
   floor_supervisor: 'Floor Supervisor', all: 'All Roles',
 };
-
-const DEFAULT_WEBHOOK_URL = 'https://pagariya-workshop-production.up.railway.app/webhook/whatsapp-green';
 
 const MESSAGES = {
   english: {
@@ -145,36 +147,40 @@ function resolveLanguageChoice(body) {
 const router = express.Router();
 router.use(express.json());
 
-function greenApiBaseUrl(instanceId) {
-  return `https://api.greenapi.com/waInstance${instanceId}`;
-}
-
-// Accepts either a Green API chatId ("919876543210@c.us") or a raw phone
-// number in any format, and returns a valid Green API chatId. Assumes a
-// bare 10-digit number is an Indian mobile number (this workshop's locale).
-function toGreenApiChatId(value) {
-  const str = String(value || '');
-  if (str.includes('@')) return str;
-  let digits = str.replace(/\D/g, '');
-  if (digits.length === 11 && digits.startsWith('0')) digits = '91' + digits.slice(1);
-  else if (digits.length === 10) digits = '91' + digits;
-  return `${digits}@c.us`;
-}
-
-async function sendGreenApiMessage(chatIdOrPhone, text) {
-  const instanceId = process.env.GREEN_API_INSTANCE_ID;
-  const token = process.env.GREEN_API_TOKEN;
-  if (!instanceId || !token) {
+// Sends a WhatsApp message via Green API. Accepts either a full chatId
+// ("919876543210@c.us") or a raw phone number in any format (with or
+// without a leading +, spaces, dashes) — non-digits are stripped before
+// appending "@c.us".
+async function sendMessage(chatId, message) {
+  const phone = chatId.includes('@') ? chatId : `${chatId.replace(/\D/g, '')}@c.us`;
+  if (!INSTANCE_ID || !API_TOKEN) {
     console.error('Green API not configured (GREEN_API_INSTANCE_ID/GREEN_API_TOKEN missing) — cannot send WhatsApp message.');
     return;
   }
   try {
-    await axios.post(`${greenApiBaseUrl(instanceId)}/sendMessage/${token}`, {
-      chatId: toGreenApiChatId(chatIdOrPhone),
-      message: text,
+    await axios.post(`${BASE_URL}/sendMessage/${API_TOKEN}`, {
+      chatId: phone,
+      message: message
     });
   } catch (err) {
-    console.error(`Green API send error to ${chatIdOrPhone}:`, err.response?.data || err.message);
+    console.error(`Green API send error to ${chatId}:`, err.response?.data || err.message);
+  }
+}
+
+// Points the Green API instance's webhook at this server. Safe to call on
+// every startup — it's idempotent (just overwrites the setting).
+async function setWebhook() {
+  if (!INSTANCE_ID || !API_TOKEN) {
+    console.log('Green API not configured (GREEN_API_INSTANCE_ID/GREEN_API_TOKEN missing) — skipping webhook setup.');
+    return;
+  }
+  try {
+    await axios.post(`${BASE_URL}/setSettings/${API_TOKEN}`, {
+      webhookUrl: 'https://pagariya-workshop-production.up.railway.app/webhook/whatsapp-green'
+    });
+    console.log('Green API webhook set');
+  } catch (err) {
+    console.error('Failed to configure Green API webhook:', err.response?.data || err.message);
   }
 }
 
@@ -189,7 +195,7 @@ function languageOf(worker) {
 }
 
 function sendToWorkerWA(worker, key, vars) {
-  sendGreenApiMessage(worker.phone, render(MESSAGES[languageOf(worker)][key], vars));
+  sendMessage(worker.phone, render(MESSAGES[languageOf(worker)][key], vars));
 }
 
 function formatDuration(totalMinutes) {
@@ -211,10 +217,10 @@ function normalizeLast10(raw) {
   return String(raw || '').replace(/\D/g, '').slice(-10);
 }
 
-// Returns all worker rows whose phone matches the sender, by last-10-digit
-// comparison (a phone may have multiple rows — different roles).
-function getWorkersByPhone(sender) {
-  const last10 = normalizeLast10(sender);
+// Returns all worker rows whose phone matches the given phone, by
+// last-10-digit comparison (a phone may have multiple rows — different roles).
+function getWorkersByPhone(phone) {
+  const last10 = normalizeLast10(phone);
   if (!last10) return [];
   return db.prepare(`SELECT * FROM workers WHERE phone IS NOT NULL`).all()
     .filter(w => normalizeLast10(w.phone) === last10);
@@ -385,16 +391,16 @@ function maybeCompleteJob(jobId, personName) {
 
 // Extracts a job card photo via Claude Vision, creates the job, and notifies
 // the sender + floor supervisors. Restricted to advisor/floor_supervisor/all roles.
-async function handleJobCardPhoto(imageMessage, workers, chatId) {
+async function handleJobCardPhoto(imageUrl, workers, chatId) {
   const M = MESSAGES[languageOf(workers[0])];
   const creator = getWorkerAs(workers, 'advisor', 'floor_supervisor');
   if (!creator) {
-    sendGreenApiMessage(chatId, M.unknown_command);
+    sendMessage(chatId, M.unknown_command);
     return;
   }
 
   try {
-    const downloadRes = await axios.get(imageMessage.downloadUrl, { responseType: 'arraybuffer' });
+    const downloadRes = await axios.get(imageUrl, { responseType: 'arraybuffer' });
     const base64 = Buffer.from(downloadRes.data).toString('base64');
 
     const response = await anthropic.messages.create({
@@ -428,30 +434,23 @@ async function handleJobCardPhoto(imageMessage, workers, chatId) {
     const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(result.lastInsertRowid);
     const vars = jobVars(job, { CUSTOMER_NAME: customer_name, CUSTOMER_PHONE: customer_phone });
 
-    sendGreenApiMessage(chatId, render(M.job_card_created, vars));
+    sendMessage(chatId, render(M.job_card_created, vars));
     notifyNextStage(job);
   } catch (err) {
     console.error('WhatsApp job card extraction failed:', err.message);
-    sendGreenApiMessage(chatId, M.extraction_failed);
+    sendMessage(chatId, M.extraction_failed);
   }
 }
 
-async function handleIncomingMessage(body) {
-  const sender = body.senderData?.sender;
-  if (!sender) return;
-  const chatId = sender;
+// Processes one inbound message. `phone` is "+<digits>" (e.g. "+919970053033"),
+// extracted from the webhook sender by the route handler below.
+async function processMessage({ phone, text, hasImage, imageUrl }) {
+  const chatId = phone;
+  const bodyText = (text || '').trim();
 
-  const imageMessage = body.messageData?.imageMessage;
-  const bodyText = (
-    body.messageData?.textMessageData?.textMessage
-    || body.messageData?.extendedTextMessageData?.text
-    || imageMessage?.caption
-    || ''
-  ).trim();
-
-  const workers = getWorkersByPhone(sender);
+  const workers = getWorkersByPhone(phone);
   if (!workers.length) {
-    if (bodyText) sendGreenApiMessage(chatId, MESSAGES.english.not_registered);
+    if (bodyText) sendMessage(chatId, MESSAGES.english.not_registered);
     return;
   }
 
@@ -460,17 +459,17 @@ async function handleIncomingMessage(body) {
     const choice = resolveLanguageChoice(bodyText);
     if (choice) {
       setLanguage(workers, choice);
-      sendGreenApiMessage(chatId, MESSAGES[choice].language_set);
-      sendGreenApiMessage(chatId, MESSAGES[choice].commands_list);
+      sendMessage(chatId, MESSAGES[choice].language_set);
+      sendMessage(chatId, MESSAGES[choice].commands_list);
     } else {
-      sendGreenApiMessage(chatId, MESSAGES.english.welcome);
+      sendMessage(chatId, MESSAGES.english.welcome);
     }
     return;
   }
 
   // ── Photo → extract job card via Claude Vision ──────────────────────────────
-  if (imageMessage) {
-    handleJobCardPhoto(imageMessage, workers, chatId).catch(err => console.error('WhatsApp job card photo handling failed:', err.message));
+  if (hasImage && imageUrl) {
+    handleJobCardPhoto(imageUrl, workers, chatId).catch(err => console.error('WhatsApp job card photo handling failed:', err.message));
     return;
   }
 
@@ -484,7 +483,7 @@ async function handleIncomingMessage(body) {
   if (lower.startsWith('assign ')) {
     const asSupervisor = getWorkerAs(workers, 'floor_supervisor');
     if (!asSupervisor) {
-      sendGreenApiMessage(chatId, M.unknown_command);
+      sendMessage(chatId, M.unknown_command);
       return;
     }
 
@@ -495,18 +494,18 @@ async function handleIncomingMessage(body) {
     ).get(`%${nameInput}%`);
 
     if (!specialist) {
-      sendGreenApiMessage(chatId, M.unknown_command);
+      sendMessage(chatId, M.unknown_command);
       return;
     }
 
     const job = db.prepare(`SELECT * FROM jobs WHERE current_stage = 'created' OR assigned_mechanic IS NULL ORDER BY created_at DESC LIMIT 1`).get();
     if (!job) {
-      sendGreenApiMessage(chatId, M.unknown_command);
+      sendMessage(chatId, M.unknown_command);
       return;
     }
 
     assignSpecialist(job.id, specialist, asSupervisor.name);
-    sendGreenApiMessage(chatId, render(M.assigned_success, {
+    sendMessage(chatId, render(M.assigned_success, {
       JOB_NUMBER: job.job_number,
       SPECIALIST_NAME: specialist.name,
       SPECIALIST_ROLE: ROLE_LABELS[specialist.role] || specialist.role,
@@ -526,7 +525,7 @@ async function handleIncomingMessage(body) {
         return;
       }
     }
-    sendGreenApiMessage(chatId, M.no_active_job);
+    sendMessage(chatId, M.no_active_job);
     return;
   }
 
@@ -561,7 +560,7 @@ async function handleIncomingMessage(body) {
       ).get();
       if (job) {
         markWashingDone(job.id, asWasher.name);
-        sendGreenApiMessage(chatId, render(M.washing_marked_done, { JOB_NUMBER: job.job_number }));
+        sendMessage(chatId, render(M.washing_marked_done, { JOB_NUMBER: job.job_number }));
         return;
       }
     }
@@ -573,12 +572,12 @@ async function handleIncomingMessage(body) {
       ).get(asAdvisor.name);
       if (job) {
         markBillingDone(job.id, asAdvisor.name);
-        sendGreenApiMessage(chatId, render(M.billing_marked_done, { JOB_NUMBER: job.job_number }));
+        sendMessage(chatId, render(M.billing_marked_done, { JOB_NUMBER: job.job_number }));
         return;
       }
     }
 
-    sendGreenApiMessage(chatId, M.no_active_job);
+    sendMessage(chatId, M.no_active_job);
     return;
   }
 
@@ -586,7 +585,7 @@ async function handleIncomingMessage(body) {
   if (bodyText === '3') {
     const asTestDriver = getWorkerAs(workers, 'test_driver');
     if (!asTestDriver) {
-      sendGreenApiMessage(chatId, M.unknown_command);
+      sendMessage(chatId, M.unknown_command);
       return;
     }
 
@@ -595,7 +594,7 @@ async function handleIncomingMessage(body) {
     ).get(asTestDriver.name);
 
     if (!job) {
-      sendGreenApiMessage(chatId, M.no_active_job);
+      sendMessage(chatId, M.no_active_job);
       return;
     }
 
@@ -640,7 +639,7 @@ async function handleIncomingMessage(body) {
     }
 
     if (!job) {
-      sendGreenApiMessage(chatId, M.no_active_job);
+      sendMessage(chatId, M.no_active_job);
       return;
     }
 
@@ -649,7 +648,7 @@ async function handleIncomingMessage(body) {
     ).run(job.id, job.current_stage, activeWorker.name, `DELAY: ${reason}`);
 
     const delayMsg = render(M.delay_logged, { JOB_NUMBER: job.job_number, REASON: reason });
-    sendGreenApiMessage(chatId, delayMsg);
+    sendMessage(chatId, delayMsg);
 
     const supervisors = db.prepare(`SELECT * FROM workers WHERE role IN ('floor_supervisor', 'all') AND phone IS NOT NULL`).all();
     for (const s of supervisors) {
@@ -677,7 +676,7 @@ async function handleIncomingMessage(body) {
       SELECT COUNT(*) AS n FROM jobs WHERE current_stage = 'done' AND date(updated_at) = date('now')
     `).get().n;
 
-    sendGreenApiMessage(chatId, render(M.status, {
+    sendMessage(chatId, render(M.status, {
       COUNT: activeJobs.length,
       JOB_LIST: jobList,
       DELAYED_COUNT: delayedCount,
@@ -687,44 +686,28 @@ async function handleIncomingMessage(body) {
   }
 
   // ── Unknown command → help ───────────────────────────────────────────────────
-  sendGreenApiMessage(chatId, M.unknown_command);
+  sendMessage(chatId, M.unknown_command);
 }
 
 // ── Webhook receiver ─────────────────────────────────────────────────────────
-// Ack immediately (Green API retries on timeout/non-2xx), then process async.
-router.post('/webhook/whatsapp-green', (req, res) => {
-  res.sendStatus(200);
+router.post('/webhook/whatsapp-green', async (req, res) => {
+  res.sendStatus(200); // always respond 200 first
   const body = req.body;
   if (!body || body.typeWebhook !== 'incomingMessageReceived') return;
-  handleIncomingMessage(body).catch(err => console.error('Green API webhook handling failed:', err.message));
+  const sender = body.senderData?.sender; // format: "919970053033@c.us"
+  if (!sender) return;
+  const phone = '+' + sender.replace('@c.us', '');
+  const text = body.messageData?.textMessageData?.textMessage?.trim() || '';
+  const hasImage = body.messageData?.typeMessage === 'imageMessage';
+  const imageUrl = body.messageData?.imageMessage?.downloadUrl || null;
+  // now process same as telegram.js using phone to look up worker
+  processMessage({ phone, text, hasImage, imageUrl }).catch(err => console.error('Green API webhook handling failed:', err.message));
 });
-
-// ── Point the Green API instance's webhook at this server ───────────────────
-// Safe to call on every startup — it's idempotent (just overwrites the
-// setting). No-ops if Green API isn't configured, so local dev without
-// GREEN_API_* env vars still boots fine.
-async function setupWebhook() {
-  const instanceId = process.env.GREEN_API_INSTANCE_ID;
-  const token = process.env.GREEN_API_TOKEN;
-  if (!instanceId || !token) {
-    console.log('Green API not configured (GREEN_API_INSTANCE_ID/GREEN_API_TOKEN missing) — skipping webhook setup.');
-    return;
-  }
-  const webhookUrl = process.env.GREEN_API_WEBHOOK_URL || DEFAULT_WEBHOOK_URL;
-  try {
-    await axios.post(`${greenApiBaseUrl(instanceId)}/setSettings/${token}`, {
-      webhookUrl,
-      incomingWebhook: 'yes',
-    });
-    console.log('Green API webhook configured:', webhookUrl);
-  } catch (err) {
-    console.error('Failed to configure Green API webhook:', err.response?.data || err.message);
-  }
-}
 
 module.exports = router;
 module.exports.SPECIALIST_ROLES = SPECIALIST_ROLES;
-module.exports.sendGreenApiMessage = sendGreenApiMessage;
+module.exports.sendMessage = sendMessage;
+module.exports.setWebhook = setWebhook;
 module.exports.notifyNextStage = notifyNextStage;
 module.exports.advanceJobStage = advanceJobStage;
 module.exports.assignSpecialist = assignSpecialist;
@@ -732,4 +715,3 @@ module.exports.passTestDrive = passTestDrive;
 module.exports.failTestDrive = failTestDrive;
 module.exports.markBillingDone = markBillingDone;
 module.exports.markWashingDone = markWashingDone;
-module.exports.setupWebhook = setupWebhook;
