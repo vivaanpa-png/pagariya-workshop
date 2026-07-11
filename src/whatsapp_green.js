@@ -699,7 +699,9 @@ router.post('/webhook/whatsapp-green', async (req, res) => {
   const phone = '+' + sender.replace('@c.us', '');
   const text = body.messageData?.textMessageData?.textMessage?.trim() || '';
   const hasImage = body.messageData?.typeMessage === 'imageMessage';
-  const imageUrl = body.messageData?.imageMessage?.downloadUrl || null;
+  // Green API puts the download URL (and caption) under fileMessageData for
+  // image messages, not under an "imageMessage" key.
+  const imageUrl = body.messageData?.fileMessageData?.downloadUrl || null;
   console.log('Message received - hasImage:', hasImage, 'typeMessage:', body.messageData?.typeMessage, 'imageUrl:', imageUrl);
   if (hasImage && !imageUrl) {
     console.log('Full messageData:', JSON.stringify(body.messageData, null, 2));
