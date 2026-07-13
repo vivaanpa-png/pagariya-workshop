@@ -1,20 +1,17 @@
 /*
  * WhatsApp bot (Green API)
  *
- * Replaces the Telegram bot (src/telegram.js, kept running as a backup for
- * now) with a WhatsApp integration built on Green API
- * (https://green-api.com). Workers are identified by phone number — the
- * same `phone` column already used elsewhere in the app — so there is no
- * separate "linking" step like Telegram's telegram_id.
+ * A WhatsApp integration built on Green API (https://green-api.com).
+ * Workers are identified by phone number — the same `phone` column already
+ * used elsewhere in the app — so there is no separate "linking" step.
  *
  * SETUP: Set GREEN_API_INSTANCE_ID and GREEN_API_TOKEN in .env. On server
  * startup, setWebhook() points the Green API instance's webhookUrl at
  * POST /webhook/whatsapp-green on this server.
  *
- * LANGUAGE SELECTION: identical to the Telegram bot — the first time a
- * worker messages the bot, they're shown a language picker (1 - English,
- * 2 - Hindi, 3 - Marathi). Their choice is saved to `workers.language`
- * (shared with the Telegram bot, since it's the same person).
+ * LANGUAGE SELECTION: the first time a worker messages the bot, they're
+ * shown a language picker (1 - English, 2 - Hindi, 3 - Marathi). Their
+ * choice is saved to `workers.language`.
  *
  * ROLES: advisor, floor_supervisor, technician, electrician, denter,
  * test_driver, washer, all (acts as any role — bypasses every role check
@@ -37,8 +34,7 @@
  *   delay [reason]  any worker: report delay on current job
  *   status          any worker: list all active jobs
  *
- *   A photo of a job card is OCR'd via Claude Vision and creates a job,
- *   same as the Telegram bot.
+ *   A photo of a job card is OCR'd via Claude Vision and creates a job.
  */
 
 const express = require('express');
@@ -706,7 +702,7 @@ router.post('/webhook/whatsapp-green', async (req, res) => {
   if (hasImage && !imageUrl) {
     console.log('Full messageData:', JSON.stringify(body.messageData, null, 2));
   }
-  // now process same as telegram.js using phone to look up worker
+  // process the message, looking up the worker by phone
   processMessage({ phone, text, hasImage, imageUrl }).catch(err => console.error('Green API webhook handling failed:', err.message));
 });
 

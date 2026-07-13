@@ -24,8 +24,8 @@
  * src/whatsapp_green.js uses — Instagram DMs only expose an opaque
  * per-app user ID (IGSID), not a phone number — so a worker's first inbound
  * DM will need to be linked to their `workers` row (e.g. an admin "link
- * Instagram" step, mirroring how Telegram linking works) before the
- * {name}/{mobile}/{position} placeholders below can be filled in.
+ * Instagram" step) before the {name}/{mobile}/{position} placeholders below
+ * can be filled in.
  *
  * Branch logic (to implement once wired up):
  *   Reply YES            → workers.confirmed = 1, send CONFIRMATION_ACK
@@ -39,7 +39,7 @@
  */
 
 // {name} / {mobile} / {position} are template placeholders — fill them via
-// a render() helper like src/telegram.js's before sending.
+// a render() helper like src/whatsapp_green.js's before sending.
 const CONFIRMATION_PROMPT = `Namaste! Main Pagariya Auto Workshop ka digital tracking system hoon.
 
 Aapki details confirm karni hain:

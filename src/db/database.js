@@ -72,9 +72,11 @@ try { db.exec(`ALTER TABLE jobs ADD COLUMN test_drive_note TEXT`); } catch {}
 try { db.exec(`ALTER TABLE jobs ADD COLUMN billing_done INTEGER DEFAULT 0`); } catch {}
 try { db.exec(`ALTER TABLE jobs ADD COLUMN washing_done INTEGER DEFAULT 0`); } catch {}
 
-// Add telegram_id/language columns to workers if they don't exist yet
-try { db.exec(`ALTER TABLE workers ADD COLUMN telegram_id TEXT`); } catch {}
+// Add language column to workers if it doesn't exist yet
 try { db.exec(`ALTER TABLE workers ADD COLUMN language TEXT DEFAULT 'english'`); } catch {}
+
+// Telegram bot has been removed — drop its now-unused linking column.
+try { db.exec(`ALTER TABLE workers DROP COLUMN telegram_id`); } catch {}
 
 // Instagram first-contact confirmation flow (see src/instagram_messages.js).
 // confirmed: worker replied YES to the details-confirmation DM.

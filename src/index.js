@@ -3,7 +3,6 @@ const express = require('express');
 const path = require('path');
 const db = require('./db/database');
 const whatsapp = require('./whatsapp');
-const telegram = require('./telegram');
 const greenRouter = require('./whatsapp_green');
 const jobcard = require('./routes/jobcard');
 const { startDailySummaryJob } = require('./dailySummary');
@@ -21,7 +20,6 @@ app.get('/floor', (req, res) => {
 
 app.use(express.static(path.join(__dirname, '../public')));
 app.use(whatsapp);
-app.use(telegram);
 app.use('/', greenRouter);
 app.use(jobcard);
 
@@ -49,7 +47,7 @@ app.post('/api/jobs', (req, res) => {
     `).run(result.lastInsertRowid, created_by || customer_name);
 
     const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(result.lastInsertRowid);
-    telegram.notifyNextStage(job);
+    greenRouter.notifyNextStage(job);
 
     res.json({ success: true, id: result.lastInsertRowid });
   } catch (err) {
@@ -59,7 +57,7 @@ app.post('/api/jobs', (req, res) => {
 
 // Update job stage — generic admin override (dashboard stage dropdown,
 // "mark delayed"). Always fires the same notification dispatcher used by the
-// Telegram bot, so a manual override still reaches the right person.
+// WhatsApp bot, so a manual override still reaches the right person.
 app.patch('/api/jobs/:id/stage', (req, res) => {
   const { stage, person, note } = req.body;
   const { id } = req.params;
@@ -75,7 +73,7 @@ app.patch('/api/jobs/:id/stage', (req, res) => {
   `).run(id, stage, person, note);
 
   const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(id);
-  telegram.notifyNextStage(job, prevJob);
+  greenRouter.notifyNextStage(job, prevJob);
 
   res.json({ success: true });
 });
@@ -86,49 +84,49 @@ app.patch('/api/jobs/:id/assign', (req, res) => {
   const { id } = req.params;
 
   if (!name?.trim()) return res.status(400).json({ error: 'name is required' });
-  if (!telegram.SPECIALIST_ROLES.includes(role) && role !== 'all') {
-    return res.status(400).json({ error: `role must be one of: ${telegram.SPECIALIST_ROLES.join(', ')}, all` });
+  if (!greenRouter.SPECIALIST_ROLES.includes(role) && role !== 'all') {
+    return res.status(400).json({ error: `role must be one of: ${greenRouter.SPECIALIST_ROLES.join(', ')}, all` });
   }
 
-  const job = telegram.assignSpecialist(id, { name: name.trim(), role }, person || 'Dashboard');
+  const job = greenRouter.assignSpecialist(id, { name: name.trim(), role }, person || 'Dashboard');
   res.json({ success: true, job });
 });
 
 // Floor kiosk: specialist starts their assigned job.
 app.patch('/api/jobs/:id/floor-start', (req, res) => {
-  const job = telegram.advanceJobStage(req.params.id, 'in_progress', 'Floor Kiosk', 'Started from floor kiosk');
+  const job = greenRouter.advanceJobStage(req.params.id, 'in_progress', 'Floor Kiosk', 'Started from floor kiosk');
   res.json({ success: true, job });
 });
 
 // Floor kiosk: specialist marks repair work done — sends the job to test drive.
 app.patch('/api/jobs/:id/floor-done', (req, res) => {
-  const job = telegram.advanceJobStage(req.params.id, 'test_drive', 'Floor Kiosk', 'Repair marked done from floor kiosk');
+  const job = greenRouter.advanceJobStage(req.params.id, 'test_drive', 'Floor Kiosk', 'Repair marked done from floor kiosk');
   res.json({ success: true, job });
 });
 
 // Test driver records a pass/fail result via the dashboard (mirrors the
-// Telegram 2/3 replies).
+// WhatsApp 2/3 replies).
 app.patch('/api/jobs/:id/test-drive', (req, res) => {
   const { result, note, person } = req.body;
   const { id } = req.params;
   const testDriverName = person || 'Dashboard';
 
   const job = result === 'pass'
-    ? telegram.passTestDrive(id, testDriverName)
-    : telegram.failTestDrive(id, testDriverName, note);
+    ? greenRouter.passTestDrive(id, testDriverName)
+    : greenRouter.failTestDrive(id, testDriverName, note);
 
   res.json({ success: true, job });
 });
 
 // Advisor marks billing complete for a job.
 app.patch('/api/jobs/:id/billing-done', (req, res) => {
-  const job = telegram.markBillingDone(req.params.id, req.body.person || 'Dashboard');
+  const job = greenRouter.markBillingDone(req.params.id, req.body.person || 'Dashboard');
   res.json({ success: true, job });
 });
 
 // Floor kiosk: washer marks washing complete for a job.
 app.patch('/api/jobs/:id/washing-done', (req, res) => {
-  const job = telegram.markWashingDone(req.params.id, req.body.person || 'Floor Kiosk');
+  const job = greenRouter.markWashingDone(req.params.id, req.body.person || 'Floor Kiosk');
   res.json({ success: true, job });
 });
 
